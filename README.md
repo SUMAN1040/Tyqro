@@ -1,6 +1,6 @@
-# WorkLog
+# Tyqro
 
-WorkLog is a modern productivity and attendance tracking web application, designed with a clean, Notion/Linear-inspired interface. It helps users manage their daily tasks while maintaining a robust, live-updating log of their work hours and performance.
+Tyqro is a modern productivity and attendance tracking web application, designed with a clean, Notion/Linear-inspired interface. It helps users manage their daily tasks while maintaining a robust, live-updating log of their work hours and performance.
 
 ## Features
 
@@ -22,7 +22,7 @@ WorkLog is a modern productivity and attendance tracking web application, design
 
 1. **Clone the repository** (if applicable) or navigate to the project directory:
    ```bash
-   cd WorkLog
+   cd Tyqro
    ```
 
 2. **Create and activate a virtual environment**:

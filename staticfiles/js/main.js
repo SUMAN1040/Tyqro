@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const htmlEl = document.documentElement;
     if (themeToggle) {
         // Init theme from localStorage
-        const savedTheme = localStorage.getItem('worklog-theme') || 'light';
+        const savedTheme = localStorage.getItem('tyqro-theme') || 'light';
         htmlEl.setAttribute('data-bs-theme', savedTheme);
         themeToggle.innerHTML = savedTheme === 'dark' ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon-stars"></i>';
 
@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentTheme = htmlEl.getAttribute('data-bs-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             htmlEl.setAttribute('data-bs-theme', newTheme);
-            localStorage.setItem('worklog-theme', newTheme);
+            localStorage.setItem('tyqro-theme', newTheme);
             themeToggle.innerHTML = newTheme === 'dark' ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon-stars"></i>';
         });
     }
@@ -349,14 +349,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const lastNotified = localStorage.getItem('reminder_date');
             const todayStr = now.toDateString();
             if (lastNotified !== todayStr) {
-                showToast("WorkLog Reminder: Your work session has not started yet.");
+                showToast("Tyqro Reminder: Your work session has not started yet.");
                 // Also trigger browser notification if permission granted
                 if (Notification.permission === "granted") {
-                    new Notification("WorkLog Reminder", { body: "Your work session has not started yet." });
+                    new Notification("Tyqro Reminder", { body: "Your work session has not started yet." });
                 } else if (Notification.permission !== "denied") {
                     Notification.requestPermission().then(permission => {
                         if (permission === "granted") {
-                            new Notification("WorkLog Reminder", { body: "Your work session has not started yet." });
+                            new Notification("Tyqro Reminder", { body: "Your work session has not started yet." });
                         }
                     });
                 }

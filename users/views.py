@@ -44,7 +44,7 @@ def signup_view(request):
             request.session['signup_otp'] = otp
             request.session['signup_user_id'] = user.id
             
-            mail_subject = 'Your WorkLog Verification Code'
+            mail_subject = 'Your Tyqro Verification Code'
             message = render_to_string('verification_email.html', {
                 'user': user,
                 'otp': otp,
