@@ -53,6 +53,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return response.json();
     };
 
+    // Avatar Upload Validation
+    const avatarInput = document.getElementById('avatarInput');
+    if (avatarInput) {
+        avatarInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                if (this.files[0].size > 300 * 1024) { // 300KB
+                    showToast('Profile image must be less than 300KB.', true);
+                    this.value = ''; // clear input
+                }
+            }
+        });
+    }
 
     // === Attendance & Timer Logic ===
     const startWorkBtn = document.getElementById('startWorkBtn');
