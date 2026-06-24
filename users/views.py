@@ -161,3 +161,99 @@ def verify_email_update(request):
             messages.error(request, 'Invalid OTP. Please try again.')
             
     return render(request, 'verify_email_update.html', {'email': pending_email})
+
+def forgot_password(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+        
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        if not email:
+            messages.error(request, 'Please enter your email address.')
+            return redirect('forgot_password')
+            
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            # We still show a generic message to prevent email enumeration
+            messages.success(request, 'If an account with that email exists, we have sent a verification code.')
+            return redirect('login')
+            
+        otp = str(random.randint(100000, 999999))
+        request.session['reset_otp'] = otp
+        request.session['reset_email'] = email
+        
+        mail_subject = 'Tyqro Password Reset Code'
+        message = render_to_string('verification_email.html', {
+            'user': user,
+            'otp': otp,
+            'is_reset': True
+        })
+        email_msg = EmailMessage(
+                    mail_subject, message, to=[email]
+        )
+        email_msg.send()
+        return redirect('forgot_password_verify')
+        
+    return render(request, 'forgot_password.html')
+
+def forgot_password_verify(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+        
+    email = request.session.get('reset_email')
+    stored_otp = request.session.get('reset_otp')
+    
+    if not email or not stored_otp:
+        messages.error(request, 'Password reset session expired. Please try again.')
+        return redirect('forgot_password')
+        
+    if request.method == 'POST':
+        entered_otp = request.POST.get('otp', '').strip()
+        if entered_otp == stored_otp:
+            request.session['can_reset_password'] = True
+            return redirect('reset_password')
+        else:
+            messages.error(request, 'Invalid verification code. Please try again.')
+            
+    return render(request, 'forgot_password_verify.html', {'email': email})
+
+def reset_password(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+        
+    email = request.session.get('reset_email')
+    can_reset = request.session.get('can_reset_password')
+    
+    if not email or not can_reset:
+        messages.error(request, 'Unauthorized access to password reset.')
+        return redirect('forgot_password')
+        
+    if request.method == 'POST':
+        password = request.POST.get('password')
+        confirm_password = request.POST.get('confirm_password')
+        
+        if not password or not confirm_password:
+            messages.error(request, 'Please fill in both fields.')
+        elif password != confirm_password:
+            messages.error(request, 'Passwords do not match.')
+        elif len(password) < 8:
+            messages.error(request, 'Password must be at least 8 characters long.')
+        else:
+            try:
+                user = User.objects.get(email=email)
+                user.set_password(password)
+                user.save()
+                
+                # Clean up session
+                del request.session['reset_otp']
+                del request.session['reset_email']
+                del request.session['can_reset_password']
+                
+                messages.success(request, 'Password has been reset successfully! You can now log in.')
+                return redirect('login')
+            except User.DoesNotExist:
+                messages.error(request, 'User not found.')
+                return redirect('forgot_password')
+                
+    return render(request, 'reset_password.html')
