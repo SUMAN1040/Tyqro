@@ -1,5 +1,7 @@
 # Tyqro
 
+![Tyqro Dashboard Mockup](./tyqro_mockup.png)
+
 Tyqro is a modern productivity and attendance tracking web application, designed with a clean, Notion/Linear-inspired interface. It helps users manage their daily tasks while maintaining a robust, live-updating log of their work hours and performance.
 
 ## Features
@@ -14,7 +16,9 @@ Tyqro is a modern productivity and attendance tracking web application, designed
 ## Tech Stack
 
 - **Backend**: Django 5.x (Python)
-- **Database**: SQLite3 (Default)
+- **Database**: PostgreSQL (Supabase)
+- **Media Storage**: Cloudinary
+- **Hosting**: Vercel (Serverless)
 - **Frontend**: HTML5, Vanilla JavaScript, Bootstrap 5, Custom CSS
 - **Data Visualization**: Chart.js
 
@@ -29,6 +33,13 @@ Tyqro is a modern productivity and attendance tracking web application, designed
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+   ```
+
+3. **Configure Environment Variables**:
+   Rename `.env.example` to `.env` (or create a `.env` file) and add your connection strings:
+   ```env
+   DATABASE_URL=postgresql://...
+   CLOUDINARY_URL=cloudinary://...
    ```
 
 3. **Install dependencies**:
