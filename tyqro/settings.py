@@ -16,6 +16,12 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 # Expire session on browser close
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
+# Trust Vercel's proxy for HTTPS detection regardless of DEBUG mode
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Trusted origins for CSRF (Django 4.0+)
+CSRF_TRUSTED_ORIGINS = ['https://*.vercel.app']
+
 # Production Security Settings (Enabled when DEBUG is False)
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
@@ -23,8 +29,6 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    # If deploying behind a proxy (like Nginx, Heroku, Render), trust the X-Forwarded-Proto header
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
