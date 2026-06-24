@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block html_attrs %}data-bs-theme="light"{% endblock %}
+
 {% block title %}Tyqro - Free Time Tracking & Productivity Dashboard{% endblock %}
 
 {% block meta_description %}Tyqro is the ultimate free time tracking, attendance, and task management platform. Boost your productivity with real-time analytics, daily todos, and a beautiful UI.{% endblock %}
@@ -9,9 +11,9 @@
 {% block header %}
 <!-- Public SEO-Optimized Navbar -->
 <header>
-    <nav class="navbar navbar-expand-lg py-3 fixed-top" style="background: rgba(var(--bs-dark-rgb), 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.05);">
+    <nav class="navbar navbar-expand-lg py-3 fixed-top" style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.05);">
         <div class="container">
-            <a class="navbar-brand fs-4 fw-bold text-white d-flex align-items-center gap-2" href="/">
+            <a class="navbar-brand fs-4 fw-bold text-dark d-flex align-items-center gap-2" href="/">
                 <i class="bi bi-layers-half text-info"></i> Tyqro '26
             </a>
             <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#publicNav" aria-label="Toggle navigation">
@@ -28,7 +30,7 @@
                         <a href="{% url 'login' %}" class="btn rounded-pill px-3 py-1 fw-bold text-dark border-0" style="background-color: #d1fae5; font-size: 0.9rem;">
                             <i class="bi bi-box-arrow-in-right me-1"></i> Login
                         </a>
-                        <a href="{% url 'signup' %}" class="text-light text-decoration-none fw-medium hover-opacity small">Sign up</a>
+                        <a href="{% url 'signup' %}" class="text-dark text-decoration-none fw-medium hover-opacity small">Sign up</a>
                     </div>
                 </div>
             </div>
@@ -52,12 +54,12 @@
             <div class="row align-items-center mb-5">
                 <!-- Hero Text -->
                 <div class="col-lg-6 mb-5 mb-lg-0 pe-lg-5">
-                    <div class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill mb-4 border border-secondary border-opacity-25 bg-dark bg-opacity-50" style="backdrop-filter: blur(10px);">
+                    <div class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill mb-4 border border-dark border-opacity-10 bg-white shadow-sm" style="backdrop-filter: blur(10px);">
                         <span class="badge bg-primary rounded-pill">New</span>
-                        <span class="small text-light fw-medium">The all-in-one productivity suite</span>
+                        <span class="small text-dark fw-medium">The all-in-one productivity suite</span>
                     </div>
                     
-                    <h1 class="display-3 fw-bold mb-4 lh-tight text-white tracking-tight">
+                    <h1 class="display-3 fw-bold mb-4 lh-tight text-dark tracking-tight">
                         Master your time.<br/>
                         <span style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Elevate your work.</span>
                     </h1>
@@ -70,7 +72,7 @@
                         <a href="{% url 'signup' %}" class="btn btn-primary btn-lg rounded-pill px-5 py-3 fw-bold shadow-lg hover-lift d-flex align-items-center justify-content-center gap-2">
                             Start for free <i class="bi bi-arrow-right"></i>
                         </a>
-                        <a href="#features" class="btn btn-outline-light border-opacity-25 btn-lg rounded-pill px-5 py-3 fw-medium hover-lift bg-dark bg-opacity-50">
+                        <a href="#features" class="btn btn-outline-dark border-opacity-25 btn-lg rounded-pill px-5 py-3 fw-medium hover-lift bg-white shadow-sm">
                             Explore Features
                         </a>
                     </div>
@@ -86,8 +88,8 @@
                         <div class="position-absolute top-50 start-50 translate-middle w-100 h-100 bg-primary opacity-20 rounded-circle blur-3xl" style="filter: blur(100px); z-index: -1;"></div>
                         
                         <!-- Abstract Dashboard UI -->
-                        <div class="bg-dark border border-secondary border-opacity-25 rounded-4 shadow-lg p-4 w-100" style="backdrop-filter: blur(20px); background: rgba(var(--bs-dark-rgb), 0.7);">
-                            <div class="d-flex align-items-center mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+                        <div class="bg-white border border-dark border-opacity-25 rounded-4 shadow-lg p-4 w-100" style="backdrop-filter: blur(20px); background: rgba(var(--bs-dark-rgb), 0.7);">
+                            <div class="d-flex align-items-center mb-4 pb-3 border-bottom border-dark border-opacity-10">
                                 <div class="d-flex gap-2">
                                     <div class="rounded-circle bg-danger opacity-75" style="width: 12px; height: 12px;"></div>
                                     <div class="rounded-circle bg-warning opacity-75" style="width: 12px; height: 12px;"></div>
@@ -101,15 +103,15 @@
                                 <div class="col-4">
                                     <div class="d-flex flex-column gap-3">
                                         <div class="bg-primary bg-opacity-25 rounded p-2 w-100" style="height: 24px;"></div>
-                                        <div class="bg-secondary bg-opacity-10 rounded p-2 w-75" style="height: 20px;"></div>
-                                        <div class="bg-secondary bg-opacity-10 rounded p-2 w-50" style="height: 20px;"></div>
-                                        <div class="bg-secondary bg-opacity-10 rounded p-2 w-75" style="height: 20px;"></div>
+                                        <div class="bg-dark bg-opacity-10 rounded p-2 w-75" style="height: 20px;"></div>
+                                        <div class="bg-dark bg-opacity-10 rounded p-2 w-50" style="height: 20px;"></div>
+                                        <div class="bg-dark bg-opacity-10 rounded p-2 w-75" style="height: 20px;"></div>
                                     </div>
                                     
-                                    <div class="mt-4 pt-4 border-top border-secondary border-opacity-25">
+                                    <div class="mt-4 pt-4 border-top border-dark border-opacity-10">
                                         <div class="d-flex align-items-center gap-2">
                                             <div class="rounded-circle bg-primary bg-opacity-50" style="width: 32px; height: 32px;"></div>
-                                            <div class="bg-secondary bg-opacity-25 rounded p-2 w-50" style="height: 16px;"></div>
+                                            <div class="bg-light rounded p-2 w-50" style="height: 16px;"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -117,25 +119,25 @@
                                 <!-- Main Content -->
                                 <div class="col-8">
                                     <!-- Timer Card -->
-                                    <div class="bg-black bg-opacity-25 rounded-3 p-4 mb-4 border border-secondary border-opacity-10 text-center shadow-sm">
+                                    <div class="bg-light rounded-3 p-4 mb-4 border border-dark border-opacity-10 text-center shadow-sm">
                                         <div class="text-primary fw-bold tracking-widest small mb-2">ACTIVE SESSION</div>
-                                        <div class="display-4 fw-bold text-white font-monospace" style="letter-spacing: -2px;">02:45:12</div>
+                                        <div class="display-4 fw-bold text-dark font-monospace" style="letter-spacing: -2px;">02:45:12</div>
                                         <div class="mt-3 bg-gradient rounded-pill mx-auto" style="height: 6px; width: 60%; background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);"></div>
                                     </div>
                                     
                                     <!-- Todo List -->
                                     <div class="d-flex flex-column gap-3">
-                                        <div class="d-flex align-items-center gap-3 bg-secondary bg-opacity-10 p-3 rounded-3 border border-secondary border-opacity-10">
+                                        <div class="d-flex align-items-center gap-3 bg-dark bg-opacity-10 p-3 rounded-3 border border-dark border-opacity-10">
                                             <div class="rounded-circle bg-success opacity-75" style="width: 16px; height: 16px;"></div>
-                                            <div class="bg-secondary bg-opacity-25 rounded w-75" style="height: 14px;"></div>
+                                            <div class="bg-light rounded w-75" style="height: 14px;"></div>
                                         </div>
                                         <div class="d-flex align-items-center gap-3 bg-primary bg-opacity-10 p-3 rounded-3 border border-primary border-opacity-25">
                                             <div class="rounded-circle bg-transparent border border-primary border-2" style="width: 16px; height: 16px;"></div>
                                             <div class="bg-primary bg-opacity-25 rounded w-50" style="height: 14px;"></div>
                                         </div>
-                                        <div class="d-flex align-items-center gap-3 bg-secondary bg-opacity-10 p-3 rounded-3 border border-secondary border-opacity-10">
+                                        <div class="d-flex align-items-center gap-3 bg-dark bg-opacity-10 p-3 rounded-3 border border-dark border-opacity-10">
                                             <div class="rounded-circle bg-transparent border border-secondary border-2" style="width: 16px; height: 16px;"></div>
-                                            <div class="bg-secondary bg-opacity-25 rounded w-100" style="height: 14px;"></div>
+                                            <div class="bg-light rounded w-100" style="height: 14px;"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -148,10 +150,10 @@
     </section>
 
     <!-- 2. LOGO CLOUD (Social Proof) -->
-    <section class="py-4 border-top border-bottom border-secondary border-opacity-10 bg-dark bg-opacity-25">
+    <section class="py-4 border-top border-bottom border-dark border-opacity-10 bg-light">
         <div class="container text-center">
             <p class="text-uppercase text-muted small fw-bold tracking-widest mb-4">Trusted by remote workers & freelancers worldwide</p>
-            <div class="d-flex justify-content-center flex-wrap gap-4 gap-md-5 opacity-50 grayscale">
+            <div class="d-flex justify-content-center flex-wrap gap-4 gap-md-5 opacity-50 grayscale text-dark">
                 <i class="bi bi-stripe fs-2"></i>
                 <i class="bi bi-github fs-2"></i>
                 <i class="bi bi-slack fs-2"></i>
@@ -166,38 +168,38 @@
         <div class="container py-5 my-md-4">
             <div class="text-center mb-5 pb-4">
                 <span class="text-primary fw-bold tracking-widest text-uppercase small">Features</span>
-                <h2 class="display-5 fw-bold mb-3 mt-2 text-white">Everything you need. <br class="d-none d-md-block"/>Nothing you don't.</h2>
+                <h2 class="display-5 fw-bold mb-3 mt-2 text-dark">Everything you need. <br class="d-none d-md-block"/>Nothing you don't.</h2>
                 <p class="lead text-secondary max-w-3xl mx-auto" style="max-width: 700px;">We've carefully crafted Tyqro to provide the essential tools for maximum productivity, completely eliminating the clutter found in enterprise software.</p>
             </div>
             
             <div class="row g-4 g-lg-5">
                 <!-- Feature 1: Time Tracking -->
                 <div class="col-md-4">
-                    <article class="card h-100 bg-dark bg-opacity-50 border-secondary border-opacity-25 p-4 p-xl-5 rounded-4 hover-lift glass-card">
+                    <article class="card h-100 bg-white shadow-sm border-dark border-opacity-10 p-4 p-xl-5 rounded-4 hover-lift glass-card">
                         <div class="feature-icon bg-primary bg-opacity-10 text-primary rounded-4 p-3 mb-4 d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                             <i class="bi bi-clock-history fs-3"></i>
                         </div>
-                        <h3 class="h4 fw-bold mb-3 text-white">Precision Time Tracking</h3>
+                        <h3 class="h4 fw-bold mb-3 text-dark">Precision Time Tracking</h3>
                         <p class="text-secondary lh-lg mb-0">Clock in and clock out with a single click. Keep a detailed log of your working hours, breaks, and daily attendance history with our highly reliable built-in timer mechanism.</p>
                     </article>
                 </div>
                 <!-- Feature 2: Task Management -->
                 <div class="col-md-4">
-                    <article class="card h-100 bg-dark bg-opacity-50 border-secondary border-opacity-25 p-4 p-xl-5 rounded-4 hover-lift glass-card">
+                    <article class="card h-100 bg-white shadow-sm border-dark border-opacity-10 p-4 p-xl-5 rounded-4 hover-lift glass-card">
                         <div class="feature-icon bg-success bg-opacity-10 text-success rounded-4 p-3 mb-4 d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                             <i class="bi bi-check2-square fs-3"></i>
                         </div>
-                        <h3 class="h4 fw-bold mb-3 text-white">Task Management</h3>
+                        <h3 class="h4 fw-bold mb-3 text-dark">Task Management</h3>
                         <p class="text-secondary lh-lg mb-0">Organize your day with a lightning-fast todo list. Add tasks instantly, mark them complete, and feel the satisfaction of clearing your daily queue without context switching.</p>
                     </article>
                 </div>
                 <!-- Feature 3: Analytics -->
                 <div class="col-md-4">
-                    <article class="card h-100 bg-dark bg-opacity-50 border-secondary border-opacity-25 p-4 p-xl-5 rounded-4 hover-lift glass-card">
+                    <article class="card h-100 bg-white shadow-sm border-dark border-opacity-10 p-4 p-xl-5 rounded-4 hover-lift glass-card">
                         <div class="feature-icon bg-info bg-opacity-10 text-info rounded-4 p-3 mb-4 d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                             <i class="bi bi-graph-up-arrow fs-3"></i>
                         </div>
-                        <h3 class="h4 fw-bold mb-3 text-white">Performance Analytics</h3>
+                        <h3 class="h4 fw-bold mb-3 text-dark">Performance Analytics</h3>
                         <p class="text-secondary lh-lg mb-0">Visualize your productivity trends instantly. Our dashboard generates beautiful heatmaps and statistics showing your tasks completed and hours worked over time.</p>
                     </article>
                 </div>
@@ -206,10 +208,10 @@
     </section>
 
     <!-- 4. HOW IT WORKS SECTION (Alternating Layout) -->
-    <section id="how-it-works" class="py-5 bg-black bg-opacity-25 border-top border-bottom border-secondary border-opacity-10">
+    <section id="how-it-works" class="py-5 bg-light border-top border-bottom border-dark border-opacity-10">
         <div class="container py-5 my-md-4">
             <div class="text-center mb-5 pb-4">
-                <h2 class="display-5 fw-bold mb-3 text-white">Focus on work, not the tool.</h2>
+                <h2 class="display-5 fw-bold mb-3 text-dark">Focus on work, not the tool.</h2>
                 <p class="lead text-secondary max-w-3xl mx-auto" style="max-width: 600px;">Tyqro is designed to get out of your way so you can get into the flow state faster.</p>
             </div>
 
@@ -218,7 +220,7 @@
                 <div class="col-lg-6 order-2 order-lg-1 pe-lg-5">
                     <div class="d-flex align-items-center gap-3 mb-3">
                         <span class="fs-1 fw-bold text-primary opacity-50">01</span>
-                        <h3 class="h2 fw-bold mb-0 text-white">Start your session</h3>
+                        <h3 class="h2 fw-bold mb-0 text-dark">Start your session</h3>
                     </div>
                     <p class="text-secondary fs-5 lh-lg mb-4">Hit the "Start Work" button the moment you sit down. Tyqro instantly begins tracking your active session in the background, giving you a clear visual of your daily commitment.</p>
                     <ul class="list-unstyled text-secondary lh-lg">
@@ -228,7 +230,7 @@
                     </ul>
                 </div>
                 <div class="col-lg-6 order-1 order-lg-2 mb-5 mb-lg-0">
-                    <div class="p-4 bg-dark border border-secondary border-opacity-25 rounded-4 shadow-lg text-center">
+                    <div class="p-4 bg-white border border-dark border-opacity-25 rounded-4 shadow-lg text-center">
                         <div class="display-1 fw-bold text-primary mb-3" style="font-family: monospace;">02:45:12</div>
                         <button class="btn btn-danger rounded-pill px-4 py-2">End Work</button>
                     </div>
@@ -238,21 +240,21 @@
             <!-- Step 2 -->
             <div class="row align-items-center">
                 <div class="col-lg-6 mb-5 mb-lg-0">
-                    <div class="p-4 bg-dark border border-secondary border-opacity-25 rounded-4 shadow-lg">
-                        <div class="d-flex align-items-center gap-3 mb-3 pb-3 border-bottom border-secondary border-opacity-25">
+                    <div class="p-4 bg-white border border-dark border-opacity-25 rounded-4 shadow-lg">
+                        <div class="d-flex align-items-center gap-3 mb-3 pb-3 border-bottom border-dark border-opacity-10">
                             <input type="checkbox" class="form-check-input mt-0 fs-4 bg-transparent border-secondary" checked>
                             <span class="fs-5 text-secondary text-decoration-line-through">Review pull requests</span>
                         </div>
                         <div class="d-flex align-items-center gap-3">
                             <input type="checkbox" class="form-check-input mt-0 fs-4 bg-transparent border-secondary">
-                            <span class="fs-5 text-white">Write implementation plan</span>
+                            <span class="fs-5 text-dark">Write implementation plan</span>
                         </div>
                     </div>
                 </div>
                 <div class="col-lg-6 ps-lg-5">
                     <div class="d-flex align-items-center gap-3 mb-3">
                         <span class="fs-1 fw-bold text-success opacity-50">02</span>
-                        <h3 class="h2 fw-bold mb-0 text-white">Knock out tasks</h3>
+                        <h3 class="h2 fw-bold mb-0 text-dark">Knock out tasks</h3>
                     </div>
                     <p class="text-secondary fs-5 lh-lg mb-4">Add your daily objectives to the built-in Todo list. Check them off as you complete them to build momentum and maintain a clear picture of what's left for the day.</p>
                 </div>
@@ -263,7 +265,7 @@
     <!-- 5. FINAL CTA SECTION -->
     <section class="py-6 position-relative overflow-hidden text-center" style="background: linear-gradient(180deg, rgba(var(--bs-dark-rgb),0) 0%, rgba(0, 242, 254, 0.05) 100%);">
         <div class="container py-5 my-5">
-            <h2 class="display-4 fw-bold text-white mb-4">Ready to boost your productivity?</h2>
+            <h2 class="display-4 fw-bold text-dark mb-4">Ready to boost your productivity?</h2>
             <p class="lead text-secondary mb-5 mx-auto" style="max-width: 600px;">Join thousands of professionals who have simplified their workflow and taken control of their time.</p>
             <a href="{% url 'signup' %}" class="btn btn-primary btn-lg rounded-pill px-5 py-3 fw-bold shadow-lg hover-lift fs-5">
                 Create Your Free Account
@@ -277,7 +279,7 @@
 
 {% block footer %}
 <!-- Public SEO-Optimized Footer -->
-<footer class="bg-dark border-top border-secondary border-opacity-25 pt-5 pb-4 mt-auto">
+<footer class="bg-dark border-top border-dark border-opacity-10 pt-5 pb-4 mt-auto">
     <div class="container pt-3">
         <div class="row gy-5 mb-5">
             <div class="col-lg-4 pe-lg-5">
@@ -320,7 +322,7 @@
             </div>
         </div>
         
-        <hr class="border-secondary border-opacity-10 mb-4">
+        <hr class="border-dark border-opacity-10 mb-4">
         
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
             <div class="text-secondary small">
@@ -337,7 +339,7 @@
     /* Custom utility classes for landing page */
     .tracking-tight { letter-spacing: -0.04em; }
     .tracking-widest { letter-spacing: 0.1em; }
-    .hover-white:hover { color: white !important; }
+    .hover-dark:hover { color: white !important; }
     .transition-all { transition: all 0.2s ease-in-out; }
     .hover-lift { transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease; }
     .hover-lift:hover { transform: translateY(-5px); box-shadow: 0 1rem 3rem rgba(0,0,0,.175)!important; }
