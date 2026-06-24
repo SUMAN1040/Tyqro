@@ -3,11 +3,11 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import AuthenticationForm
 
 class UserSignupForm(forms.ModelForm):
-    first_name = forms.CharField(max_length=30, required=True, label='First Name')
-    last_name = forms.CharField(max_length=30, required=True, label='Last Name')
-    email = forms.EmailField(max_length=254, required=True, label='Email Address')
-    password = forms.CharField(widget=forms.PasswordInput, label='Password')
-    password_confirm = forms.CharField(widget=forms.PasswordInput, label='Confirm Password')
+    first_name = forms.CharField(max_length=30, required=True, label='First Name', widget=forms.TextInput(attrs={'class': 'form-control bg-dark text-white border-secondary'}))
+    last_name = forms.CharField(max_length=30, required=True, label='Last Name', widget=forms.TextInput(attrs={'class': 'form-control bg-dark text-white border-secondary'}))
+    email = forms.EmailField(max_length=254, required=True, label='Email Address', widget=forms.EmailInput(attrs={'class': 'form-control bg-dark text-white border-secondary'}))
+    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control bg-dark text-white border-secondary'}), label='Password')
+    password_confirm = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control bg-dark text-white border-secondary'}), label='Confirm Password')
 
     class Meta:
         model = User
@@ -38,4 +38,8 @@ class UserSignupForm(forms.ModelForm):
         return user
 
 class EmailAuthenticationForm(AuthenticationForm):
-    username = forms.EmailField(label="Email Address", widget=forms.EmailInput(attrs={'autofocus': True}))
+    username = forms.EmailField(label="Email Address", widget=forms.EmailInput(attrs={'autofocus': True, 'class': 'form-control bg-dark text-white border-secondary'}))
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['password'].widget.attrs.update({'class': 'form-control bg-dark text-white border-secondary'})
