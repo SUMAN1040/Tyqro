@@ -1,23 +1,16 @@
-{% extends 'base.html' %}
+{% extends 'auth_base.html' %}
 
-{% block title %}Verify Email | Tyqro{% endblock %}
+{% block title %}Tyqro | Verify Email{% endblock %}
 
-{% block content %}
-<div class="row justify-content-center align-items-center min-vh-100">
-    <div class="col-md-5 col-lg-4">
-        <div class="card bg-glass border-0 shadow-lg p-4">
-            <div class="card-body">
-                <h2 class="text-center fw-bold mb-3">Check your inbox</h2>
-                <p class="text-center text-muted small mb-4">We've sent a 6-digit verification code to <br/><strong>{{ email }}</strong></p>
-                <form method="post">
-                    {% csrf_token %}
-                    <div class="mb-4">
-                        <input type="text" name="otp" class="form-control form-control-lg text-center fw-bold ls-widest" placeholder="• • • • • •" maxlength="6" autofocus required>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100 py-2 rounded-3 fw-medium">Verify Account</button>
-                </form>
-            </div>
-        </div>
+{% block auth_content %}
+<h3 class="text-center fw-bold text-white mb-3">Check your email</h3>
+<p class="text-secondary small text-center mb-4">We've sent a 6-digit verification code to <strong class="text-light">{{ email }}</strong>.</p>
+<form method="post">
+    {% csrf_token %}
+    <div class="mb-4">
+        <label class="form-label text-secondary small fw-medium text-center d-block w-100" for="otp">Verification Code</label>
+        <input type="text" name="otp" id="otp" class="form-control bg-dark bg-opacity-50 border-secondary border-opacity-50 text-white text-center fs-3 letter-spacing-2 py-2" maxlength="6" required autocomplete="off" style="letter-spacing: 0.5em; font-family: monospace;">
     </div>
-</div>
+    <button type="submit" class="btn btn-primary w-100 py-2 rounded-3 fw-medium shadow-sm border-0" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">Verify Account</button>
+</form>
 {% endblock %}
