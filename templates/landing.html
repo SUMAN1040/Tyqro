@@ -1,118 +1,294 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Tyqro | Simplify Your Day{% endblock %}
+{% block title %}Tyqro - Free Time Tracking & Productivity Dashboard{% endblock %}
 
-{% block content %}
-<!-- Custom CSS for the landing page -->
-<style>
-    .hero-section {
-        min-height: 80vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .gradient-text {
-        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-    
-    .blob {
-        position: absolute;
-        filter: blur(80px);
-        z-index: -1;
-        opacity: 0.5;
-    }
-    
-    .blob-1 {
-        top: -10%;
-        left: -10%;
-        width: 400px;
-        height: 400px;
-        background: #4facfe;
-        border-radius: 50%;
-    }
-    
-    .blob-2 {
-        bottom: -10%;
-        right: -10%;
-        width: 300px;
-        height: 300px;
-        background: #00f2fe;
-        border-radius: 50%;
-    }
+{% block meta_description %}Tyqro is the ultimate free time tracking, attendance, and task management platform. Boost your productivity with real-time analytics, daily todos, and a beautiful UI.{% endblock %}
 
-    .landing-card {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
-        padding: 4rem 2rem;
-    }
+{% block meta_keywords %}time tracking app, free time tracker, productivity dashboard, task management software, attendance tracker, online todo list, Tyqro{% endblock %}
+
+{% block header %}
+<!-- Public SEO-Optimized Navbar -->
+<header>
+    <nav class="navbar navbar-expand-lg py-3 fixed-top" style="background: rgba(var(--bs-dark-rgb), 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.05);">
+        <div class="container">
+            <a class="navbar-brand fs-4 fw-bold text-white d-flex align-items-center gap-2" href="/">
+                <i class="bi bi-layers-half text-primary"></i> Tyqro.
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#publicNav" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="publicNav">
+                <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link text-light fw-medium px-3" href="#features">Features</a></li>
+                    <li class="nav-item"><a class="nav-link text-light fw-medium px-3" href="#how-it-works">How It Works</a></li>
+                    <li class="nav-item"><a class="nav-link text-light fw-medium px-3" href="#benefits">Benefits</a></li>
+                </ul>
+                <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
+                    <a href="{% url 'login' %}" class="text-light text-decoration-none fw-medium hover-opacity">Log In</a>
+                    <a href="{% url 'signup' %}" class="btn btn-primary rounded-pill px-4 py-2 fw-medium shadow-sm transition-all hover-lift">Get Started Free</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>
+{% endblock %}
+
+{% block layout %}
+<main style="padding-top: 76px;"> <!-- Offset for fixed navbar -->
     
-    [data-bs-theme="light"] .landing-card {
-        background: rgba(0, 0, 0, 0.03);
-        border: 1px solid rgba(0, 0, 0, 0.05);
-    }
-</style>
+    <!-- 1. HERO SECTION -->
+    <section class="hero-section position-relative overflow-hidden pt-5 pb-5 pb-lg-0 text-center text-lg-start">
+        <!-- Decorative Gradient Blobs -->
+        <div class="position-absolute top-0 start-0 w-100 h-100 overflow-hidden" style="z-index: -1; pointer-events: none;">
+            <div class="position-absolute" style="top: -10%; left: -5%; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(79,172,254,0.15) 0%, rgba(0,0,0,0) 70%); border-radius: 50%;"></div>
+            <div class="position-absolute" style="bottom: 10%; right: -10%; width: 40vw; height: 40vw; background: radial-gradient(circle, rgba(0,242,254,0.15) 0%, rgba(0,0,0,0) 70%); border-radius: 50%;"></div>
+        </div>
 
-<div class="hero-section text-center">
-    <!-- Decorative Background Blobs -->
-    <div class="blob blob-1"></div>
-    <div class="blob blob-2"></div>
-
-    <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-lg-8">
-                <div class="landing-card shadow-lg">
-                    <h1 class="display-3 fw-bold mb-3">
-                        Welcome to <span class="gradient-text">Tyqro.</span>
+        <div class="container position-relative z-1 pt-4 pt-lg-5">
+            <div class="row align-items-center mb-5">
+                <!-- Hero Text -->
+                <div class="col-lg-6 mb-5 mb-lg-0 pe-lg-5">
+                    <div class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill mb-4 border border-secondary border-opacity-25 bg-dark bg-opacity-50" style="backdrop-filter: blur(10px);">
+                        <span class="badge bg-primary rounded-pill">New</span>
+                        <span class="small text-light fw-medium">The all-in-one productivity suite</span>
+                    </div>
+                    
+                    <h1 class="display-3 fw-bold mb-4 lh-tight text-white tracking-tight">
+                        Master your time.<br/>
+                        <span style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Elevate your work.</span>
                     </h1>
-                    <p class="lead text-muted mb-5 px-md-5">
-                        Simplify your day. Track your work hours, manage daily todos, and monitor your performance seamlessly in one beautiful platform.
+                    
+                    <p class="lead text-secondary mb-5 fs-5 lh-base">
+                        Tyqro is the ultimate productivity dashboard. Combine precision time tracking, intuitive task management, and powerful analytics into one seamless, beautifully designed platform.
                     </p>
                     
-                    <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
-                        <a href="{% url 'signup' %}" class="btn btn-primary btn-lg rounded-pill px-5 fw-medium shadow-sm">
-                            Get Started
+                    <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center justify-content-lg-start">
+                        <a href="{% url 'signup' %}" class="btn btn-primary btn-lg rounded-pill px-5 py-3 fw-bold shadow-lg hover-lift d-flex align-items-center justify-content-center gap-2">
+                            Start for free <i class="bi bi-arrow-right"></i>
                         </a>
-                        <a href="{% url 'login' %}" class="btn btn-outline-secondary btn-lg rounded-pill px-5 fw-medium bg-glass shadow-sm">
-                            Log In
+                        <a href="#features" class="btn btn-outline-light border-opacity-25 btn-lg rounded-pill px-5 py-3 fw-medium hover-lift bg-dark bg-opacity-50">
+                            Explore Features
                         </a>
+                    </div>
+                    <div class="mt-4 text-muted small d-flex align-items-center justify-content-center justify-content-lg-start gap-3">
+                        <span><i class="bi bi-check-circle-fill text-success me-1"></i> No credit card required</span>
+                        <span><i class="bi bi-check-circle-fill text-success me-1"></i> Free forever</span>
                     </div>
                 </div>
                 
-                <!-- Feature highlights -->
-                <div class="row mt-5 pt-4 text-start">
-                    <div class="col-md-4 mb-4">
-                        <div class="d-flex align-items-center mb-2">
-                            <i class="bi bi-clock-history fs-4 text-primary me-2"></i>
-                            <h5 class="mb-0 fw-bold">Time Tracking</h5>
-                        </div>
-                        <p class="text-muted small">Log your daily hours with precision and monitor your attendance easily.</p>
-                    </div>
-                    <div class="col-md-4 mb-4">
-                        <div class="d-flex align-items-center mb-2">
-                            <i class="bi bi-check2-square fs-4 text-info me-2"></i>
-                            <h5 class="mb-0 fw-bold">Task Management</h5>
-                        </div>
-                        <p class="text-muted small">Keep your workflow organized with an intuitive and fast todo list.</p>
-                    </div>
-                    <div class="col-md-4 mb-4">
-                        <div class="d-flex align-items-center mb-2">
-                            <i class="bi bi-graph-up-arrow fs-4 text-success me-2"></i>
-                            <h5 class="mb-0 fw-bold">Analytics</h5>
-                        </div>
-                        <p class="text-muted small">Visualize your performance with beautiful heatmaps and activity charts.</p>
+                <!-- Hero Image Mockup -->
+                <div class="col-lg-6">
+                    <div class="position-relative hero-image-container">
+                        <div class="position-absolute top-50 start-50 translate-middle w-100 h-100 bg-primary opacity-20 rounded-circle blur-3xl" style="filter: blur(100px); z-index: -1;"></div>
+                        <img src="{% static 'img/dashboard_mockup.png' %}" alt="Tyqro Productivity Dashboard Interface" class="img-fluid rounded-4 shadow-2xl border border-secondary border-opacity-25 w-100" style="transform: perspective(1000px) rotateY(-5deg) rotateX(2deg); transition: transform 0.5s ease;">
                     </div>
                 </div>
             </div>
         </div>
+    </section>
+
+    <!-- 2. LOGO CLOUD (Social Proof) -->
+    <section class="py-4 border-top border-bottom border-secondary border-opacity-10 bg-dark bg-opacity-25">
+        <div class="container text-center">
+            <p class="text-uppercase text-muted small fw-bold tracking-widest mb-4">Trusted by remote workers & freelancers worldwide</p>
+            <div class="d-flex justify-content-center flex-wrap gap-4 gap-md-5 opacity-50 grayscale">
+                <i class="bi bi-stripe fs-2"></i>
+                <i class="bi bi-github fs-2"></i>
+                <i class="bi bi-slack fs-2"></i>
+                <i class="bi bi-discord fs-2"></i>
+                <i class="bi bi-spotify fs-2"></i>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. CORE FEATURES SECTION -->
+    <section id="features" class="py-6 py-md-8 position-relative">
+        <div class="container py-5 my-md-4">
+            <div class="text-center mb-5 pb-4">
+                <span class="text-primary fw-bold tracking-widest text-uppercase small">Features</span>
+                <h2 class="display-5 fw-bold mb-3 mt-2 text-white">Everything you need. <br class="d-none d-md-block"/>Nothing you don't.</h2>
+                <p class="lead text-secondary max-w-3xl mx-auto" style="max-width: 700px;">We've carefully crafted Tyqro to provide the essential tools for maximum productivity, completely eliminating the clutter found in enterprise software.</p>
+            </div>
+            
+            <div class="row g-4 g-lg-5">
+                <!-- Feature 1: Time Tracking -->
+                <div class="col-md-4">
+                    <article class="card h-100 bg-dark bg-opacity-50 border-secondary border-opacity-25 p-4 p-xl-5 rounded-4 hover-lift glass-card">
+                        <div class="feature-icon bg-primary bg-opacity-10 text-primary rounded-4 p-3 mb-4 d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                            <i class="bi bi-clock-history fs-3"></i>
+                        </div>
+                        <h3 class="h4 fw-bold mb-3 text-white">Precision Time Tracking</h3>
+                        <p class="text-secondary lh-lg mb-0">Clock in and clock out with a single click. Keep a detailed log of your working hours, breaks, and daily attendance history with our highly reliable built-in timer mechanism.</p>
+                    </article>
+                </div>
+                <!-- Feature 2: Task Management -->
+                <div class="col-md-4">
+                    <article class="card h-100 bg-dark bg-opacity-50 border-secondary border-opacity-25 p-4 p-xl-5 rounded-4 hover-lift glass-card">
+                        <div class="feature-icon bg-success bg-opacity-10 text-success rounded-4 p-3 mb-4 d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                            <i class="bi bi-check2-square fs-3"></i>
+                        </div>
+                        <h3 class="h4 fw-bold mb-3 text-white">Task Management</h3>
+                        <p class="text-secondary lh-lg mb-0">Organize your day with a lightning-fast todo list. Add tasks instantly, mark them complete, and feel the satisfaction of clearing your daily queue without context switching.</p>
+                    </article>
+                </div>
+                <!-- Feature 3: Analytics -->
+                <div class="col-md-4">
+                    <article class="card h-100 bg-dark bg-opacity-50 border-secondary border-opacity-25 p-4 p-xl-5 rounded-4 hover-lift glass-card">
+                        <div class="feature-icon bg-info bg-opacity-10 text-info rounded-4 p-3 mb-4 d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                            <i class="bi bi-graph-up-arrow fs-3"></i>
+                        </div>
+                        <h3 class="h4 fw-bold mb-3 text-white">Performance Analytics</h3>
+                        <p class="text-secondary lh-lg mb-0">Visualize your productivity trends instantly. Our dashboard generates beautiful heatmaps and statistics showing your tasks completed and hours worked over time.</p>
+                    </article>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. HOW IT WORKS SECTION (Alternating Layout) -->
+    <section id="how-it-works" class="py-5 bg-black bg-opacity-25 border-top border-bottom border-secondary border-opacity-10">
+        <div class="container py-5 my-md-4">
+            <div class="text-center mb-5 pb-4">
+                <h2 class="display-5 fw-bold mb-3 text-white">Focus on work, not the tool.</h2>
+                <p class="lead text-secondary max-w-3xl mx-auto" style="max-width: 600px;">Tyqro is designed to get out of your way so you can get into the flow state faster.</p>
+            </div>
+
+            <!-- Step 1 -->
+            <div class="row align-items-center mb-5 pb-5">
+                <div class="col-lg-6 order-2 order-lg-1 pe-lg-5">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <span class="fs-1 fw-bold text-primary opacity-50">01</span>
+                        <h3 class="h2 fw-bold mb-0 text-white">Start your session</h3>
+                    </div>
+                    <p class="text-secondary fs-5 lh-lg mb-4">Hit the "Start Work" button the moment you sit down. Tyqro instantly begins tracking your active session in the background, giving you a clear visual of your daily commitment.</p>
+                    <ul class="list-unstyled text-secondary lh-lg">
+                        <li><i class="bi bi-check-lg text-primary me-2"></i> Millisecond precision tracking</li>
+                        <li><i class="bi bi-check-lg text-primary me-2"></i> Beautiful, distraction-free UI</li>
+                        <li><i class="bi bi-check-lg text-primary me-2"></i> Automatic daily archiving</li>
+                    </ul>
+                </div>
+                <div class="col-lg-6 order-1 order-lg-2 mb-5 mb-lg-0">
+                    <div class="p-4 bg-dark border border-secondary border-opacity-25 rounded-4 shadow-lg text-center">
+                        <div class="display-1 fw-bold text-primary mb-3" style="font-family: monospace;">02:45:12</div>
+                        <button class="btn btn-danger rounded-pill px-4 py-2">End Work</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="row align-items-center">
+                <div class="col-lg-6 mb-5 mb-lg-0">
+                    <div class="p-4 bg-dark border border-secondary border-opacity-25 rounded-4 shadow-lg">
+                        <div class="d-flex align-items-center gap-3 mb-3 pb-3 border-bottom border-secondary border-opacity-25">
+                            <input type="checkbox" class="form-check-input mt-0 fs-4 bg-transparent border-secondary" checked>
+                            <span class="fs-5 text-secondary text-decoration-line-through">Review pull requests</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <input type="checkbox" class="form-check-input mt-0 fs-4 bg-transparent border-secondary">
+                            <span class="fs-5 text-white">Write implementation plan</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 ps-lg-5">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <span class="fs-1 fw-bold text-success opacity-50">02</span>
+                        <h3 class="h2 fw-bold mb-0 text-white">Knock out tasks</h3>
+                    </div>
+                    <p class="text-secondary fs-5 lh-lg mb-4">Add your daily objectives to the built-in Todo list. Check them off as you complete them to build momentum and maintain a clear picture of what's left for the day.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. FINAL CTA SECTION -->
+    <section class="py-6 position-relative overflow-hidden text-center" style="background: linear-gradient(180deg, rgba(var(--bs-dark-rgb),0) 0%, rgba(0, 242, 254, 0.05) 100%);">
+        <div class="container py-5 my-5">
+            <h2 class="display-4 fw-bold text-white mb-4">Ready to boost your productivity?</h2>
+            <p class="lead text-secondary mb-5 mx-auto" style="max-width: 600px;">Join thousands of professionals who have simplified their workflow and taken control of their time.</p>
+            <a href="{% url 'signup' %}" class="btn btn-primary btn-lg rounded-pill px-5 py-3 fw-bold shadow-lg hover-lift fs-5">
+                Create Your Free Account
+            </a>
+            <p class="text-muted mt-3 small">Takes less than 30 seconds to sign up.</p>
+        </div>
+    </section>
+
+</main>
+{% endblock %}
+
+{% block footer %}
+<!-- Public SEO-Optimized Footer -->
+<footer class="bg-dark border-top border-secondary border-opacity-25 pt-5 pb-4 mt-auto">
+    <div class="container pt-3">
+        <div class="row gy-5 mb-5">
+            <div class="col-lg-4 pe-lg-5">
+                <a class="navbar-brand fs-4 fw-bold text-white mb-3 d-inline-flex align-items-center gap-2" href="/">
+                    <i class="bi bi-layers-half text-primary"></i> Tyqro.
+                </a>
+                <p class="text-secondary lh-lg mb-4">The ultimate time tracking and productivity platform for freelancers, remote workers, and professionals who want to master their workflow.</p>
+                <div class="d-flex gap-3">
+                    <a href="#" class="text-secondary hover-white transition-all"><i class="bi bi-twitter fs-5"></i><span class="visually-hidden">Twitter</span></a>
+                    <a href="#" class="text-secondary hover-white transition-all"><i class="bi bi-github fs-5"></i><span class="visually-hidden">GitHub</span></a>
+                    <a href="#" class="text-secondary hover-white transition-all"><i class="bi bi-linkedin fs-5"></i><span class="visually-hidden">LinkedIn</span></a>
+                </div>
+            </div>
+            
+            <div class="col-6 col-lg-2 offset-lg-2">
+                <h5 class="text-white mb-4 fs-6 fw-bold text-uppercase tracking-widest">Product</h5>
+                <ul class="list-unstyled mb-0 d-flex flex-column gap-3">
+                    <li><a href="#features" class="text-secondary text-decoration-none hover-white transition-all">Features</a></li>
+                    <li><a href="#how-it-works" class="text-secondary text-decoration-none hover-white transition-all">How it Works</a></li>
+                    <li><a href="{% url 'login' %}" class="text-secondary text-decoration-none hover-white transition-all">Log in</a></li>
+                    <li><a href="{% url 'signup' %}" class="text-secondary text-decoration-none hover-white transition-all">Sign up</a></li>
+                </ul>
+            </div>
+            
+            <div class="col-6 col-lg-2">
+                <h5 class="text-white mb-4 fs-6 fw-bold text-uppercase tracking-widest">Resources</h5>
+                <ul class="list-unstyled mb-0 d-flex flex-column gap-3">
+                    <li><a href="#" class="text-secondary text-decoration-none hover-white transition-all">Blog</a></li>
+                    <li><a href="#" class="text-secondary text-decoration-none hover-white transition-all">Help Center</a></li>
+                    <li><a href="#" class="text-secondary text-decoration-none hover-white transition-all">Contact</a></li>
+                </ul>
+            </div>
+            
+            <div class="col-6 col-lg-2">
+                <h5 class="text-white mb-4 fs-6 fw-bold text-uppercase tracking-widest">Legal</h5>
+                <ul class="list-unstyled mb-0 d-flex flex-column gap-3">
+                    <li><a href="#" class="text-secondary text-decoration-none hover-white transition-all">Privacy Policy</a></li>
+                    <li><a href="#" class="text-secondary text-decoration-none hover-white transition-all">Terms of Service</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <hr class="border-secondary border-opacity-10 mb-4">
+        
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+            <div class="text-secondary small">
+                &copy; 2026 Tyqro. All rights reserved.
+            </div>
+            <div class="text-secondary small d-flex align-items-center gap-1">
+                Made with <i class="bi bi-heart-fill text-danger mx-1"></i> for productivity.
+            </div>
+        </div>
     </div>
-</div>
+</footer>
+
+<style>
+    /* Custom utility classes for landing page */
+    .tracking-tight { letter-spacing: -0.04em; }
+    .tracking-widest { letter-spacing: 0.1em; }
+    .hover-white:hover { color: white !important; }
+    .transition-all { transition: all 0.2s ease-in-out; }
+    .hover-lift { transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease; }
+    .hover-lift:hover { transform: translateY(-5px); box-shadow: 0 1rem 3rem rgba(0,0,0,.175)!important; }
+    .hover-opacity:hover { opacity: 0.8; }
+    .glass-card { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    .py-6 { padding-top: 5rem; padding-bottom: 5rem; }
+    
+    /* Hero image subtle animation */
+    .hero-image-container:hover img { transform: perspective(1000px) rotateY(0deg) rotateX(0deg) !important; }
+    
+    html { scroll-behavior: smooth; }
+</style>
 {% endblock %}

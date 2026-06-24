@@ -6,8 +6,8 @@
     <title>{% block title %}Tyqro | Simplify Your Day{% endblock %}</title>
     
     <!-- SEO Meta Tags -->
-    <meta name="description" content="Tyqro is a modern attendance and task management platform. Track your work hours, manage daily todos, and monitor performance seamlessly.">
-    <meta name="keywords" content="attendance, task management, todo list, time tracking, productivity">
+    <meta name="description" content="{% block meta_description %}Tyqro is a modern attendance and task management platform. Track your work hours, manage daily todos, and monitor performance seamlessly.{% endblock %}">
+    <meta name="keywords" content="{% block meta_keywords %}attendance, task management, todo list, time tracking, productivity{% endblock %}">
     <meta name="robots" content="index, follow">
     <meta name="author" content="Tyqro">
     
@@ -38,6 +38,7 @@
     <div class="d-flex flex-column min-vh-100" id="wrapper">
         <!-- Page Content -->
         <div id="page-content-wrapper" class="w-100 flex-grow-1">
+            {% block header %}
             {% if user.is_authenticated %}
             <nav class="navbar navbar-expand py-3 px-4 border-bottom border-secondary-subtle">
                 <div class="container-fluid px-0 d-flex align-items-center justify-content-between">
@@ -70,11 +71,17 @@
                 </div>
             </nav>
             {% endif %}
+            {% endblock %}
 
+            {% block layout %}
             <main class="container py-4">
                 {% block content %}
                 {% endblock %}
             </main>
+            {% endblock %}
+            
+            {% block footer %}
+            {% endblock %}
         </div>
     </div>
 
