@@ -2,9 +2,9 @@ import os
 import sys
 
 def main():
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'worklog.settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'tyqro.settings')
     from django.core.management import execute_from_command_line
-    execute_from_command_line(["manage.py", "startproject", "worklog", "."])
+    execute_from_command_line(["manage.py", "startproject", "tyqro", "."])
     execute_from_command_line(["manage.py", "startapp", "users"])
     execute_from_command_line(["manage.py", "startapp", "attendance"])
     execute_from_command_line(["manage.py", "startapp", "todos"])

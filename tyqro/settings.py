@@ -52,7 +52,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'worklog.urls'
+ROOT_URLCONF = 'tyqro.urls'
 
 TEMPLATES = [
     {
@@ -70,7 +70,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'worklog.wsgi.application'
+WSGI_APPLICATION = 'tyqro.wsgi.application'
 
 DATABASES = {
     'default': {
