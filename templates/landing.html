@@ -12,20 +12,26 @@
     <nav class="navbar navbar-expand-lg py-3 fixed-top" style="background: rgba(var(--bs-dark-rgb), 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.05);">
         <div class="container">
             <a class="navbar-brand fs-4 fw-bold text-white d-flex align-items-center gap-2" href="/">
-                <i class="bi bi-layers-half text-primary"></i> Tyqro.
+                <i class="bi bi-layers-half text-info"></i> Tyqro '26
             </a>
             <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#publicNav" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="publicNav">
-                <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
-                    <li class="nav-item"><a class="nav-link text-light fw-medium px-3" href="#features">Features</a></li>
-                    <li class="nav-item"><a class="nav-link text-light fw-medium px-3" href="#how-it-works">How It Works</a></li>
-                    <li class="nav-item"><a class="nav-link text-light fw-medium px-3" href="#benefits">Benefits</a></li>
-                </ul>
-                <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
-                    <a href="{% url 'login' %}" class="text-light text-decoration-none fw-medium hover-opacity">Log In</a>
-                    <a href="{% url 'signup' %}" class="btn btn-primary rounded-pill px-4 py-2 fw-medium shadow-sm transition-all hover-lift">Get Started Free</a>
+                <div class="ms-auto d-flex flex-column flex-lg-row align-items-center gap-2 gap-lg-4">
+                    <ul class="navbar-nav mb-2 mb-lg-0 custom-nav-links gap-2 gap-lg-3">
+                        <li class="nav-item"><a class="nav-link text-secondary fw-medium px-2" href="#how-it-works">About</a></li>
+                        <li class="nav-item"><a class="nav-link active text-white fw-bold px-2" href="#features">Features</a></li>
+                        <li class="nav-item"><a class="nav-link text-secondary fw-medium px-2" href="#how-it-works">Timeline</a></li>
+                        <li class="nav-item"><a class="nav-link text-secondary fw-medium px-2" href="#benefits">Stories</a></li>
+                        <li class="nav-item"><a class="nav-link text-secondary fw-medium px-2" href="#">Partners</a></li>
+                    </ul>
+                    <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0 ms-lg-2">
+                        <a href="{% url 'login' %}" class="btn rounded-pill px-3 py-1 fw-bold text-dark border-0" style="background-color: #d1fae5; font-size: 0.9rem;">
+                            <i class="bi bi-box-arrow-in-right me-1"></i> Login
+                        </a>
+                        <a href="{% url 'signup' %}" class="text-light text-decoration-none fw-medium hover-opacity small">Sign up</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -343,6 +349,38 @@
     
     /* Hero image subtle animation */
     .hero-image-container:hover img { transform: perspective(1000px) rotateY(0deg) rotateX(0deg) !important; }
+    
+    /* Custom Nav Links (Underline Effect) */
+    .custom-nav-links .nav-link {
+        position: relative;
+        transition: color 0.2s;
+    }
+    .custom-nav-links .nav-link:hover {
+        color: white !important;
+    }
+    .custom-nav-links .nav-link.active::after,
+    .custom-nav-links .nav-link:hover::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60%;
+        height: 2px;
+        background-color: #34d399; /* Mint green from the image */
+        border-radius: 2px;
+    }
+    .custom-nav-links .nav-link::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 2px;
+        background-color: transparent;
+        transition: width 0.2s ease, background-color 0.2s ease;
+    }
     
     html { scroll-behavior: smooth; }
 </style>
