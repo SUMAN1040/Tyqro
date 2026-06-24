@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block title %}Tyqro | Simplify Your Day{% endblock %}
+
+{% block content %}
+<!-- Custom CSS for the landing page -->
+<style>
+    .hero-section {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .gradient-text {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .blob {
+        position: absolute;
+        filter: blur(80px);
+        z-index: -1;
+        opacity: 0.5;
+    }
+    
+    .blob-1 {
+        top: -10%;
+        left: -10%;
+        width: 400px;
+        height: 400px;
+        background: #4facfe;
+        border-radius: 50%;
+    }
+    
+    .blob-2 {
+        bottom: -10%;
+        right: -10%;
+        width: 300px;
+        height: 300px;
+        background: #00f2fe;
+        border-radius: 50%;
+    }
+
+    .landing-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 4rem 2rem;
+    }
+    
+    [data-bs-theme="light"] .landing-card {
+        background: rgba(0, 0, 0, 0.03);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+</style>
+
+<div class="hero-section text-center">
+    <!-- Decorative Background Blobs -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="landing-card shadow-lg">
+                    <h1 class="display-3 fw-bold mb-3">
+                        Welcome to <span class="gradient-text">Tyqro.</span>
+                    </h1>
+                    <p class="lead text-muted mb-5 px-md-5">
+                        Simplify your day. Track your work hours, manage daily todos, and monitor your performance seamlessly in one beautiful platform.
+                    </p>
+                    
+                    <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
+                        <a href="{% url 'signup' %}" class="btn btn-primary btn-lg rounded-pill px-5 fw-medium shadow-sm">
+                            Get Started
+                        </a>
+                        <a href="{% url 'login' %}" class="btn btn-outline-secondary btn-lg rounded-pill px-5 fw-medium bg-glass shadow-sm">
+                            Log In
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Feature highlights -->
+                <div class="row mt-5 pt-4 text-start">
+                    <div class="col-md-4 mb-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-clock-history fs-4 text-primary me-2"></i>
+                            <h5 class="mb-0 fw-bold">Time Tracking</h5>
+                        </div>
+                        <p class="text-muted small">Log your daily hours with precision and monitor your attendance easily.</p>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-check2-square fs-4 text-info me-2"></i>
+                            <h5 class="mb-0 fw-bold">Task Management</h5>
+                        </div>
+                        <p class="text-muted small">Keep your workflow organized with an intuitive and fast todo list.</p>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-graph-up-arrow fs-4 text-success me-2"></i>
+                            <h5 class="mb-0 fw-bold">Analytics</h5>
+                        </div>
+                        <p class="text-muted small">Visualize your performance with beautiful heatmaps and activity charts.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
