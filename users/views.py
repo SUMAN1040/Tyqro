@@ -53,11 +53,15 @@ def signup_view(request):
             message = render_to_string('verification_email.html', {
                 'user': user,
                 'otp': otp,
+                'purpose': 'signup',
+                'logo_url': request.build_absolute_uri('/static/img/favicon.png'),
+                'site_url': request.build_absolute_uri('/'),
             })
             to_email = form.cleaned_data.get('email')
             email = EmailMessage(
                         mail_subject, message, to=[to_email]
             )
+            email.content_subtype = "html"
             email.send()
             return redirect('verify_otp')
     else:
@@ -127,8 +131,12 @@ def update_profile(request):
             message = render_to_string('verification_email.html', {
                 'user': user,
                 'otp': otp,
+                'purpose': 'update_email',
+                'logo_url': request.build_absolute_uri('/static/img/favicon.png'),
+                'site_url': request.build_absolute_uri('/'),
             })
             email = EmailMessage(mail_subject, message, to=[new_email])
+            email.content_subtype = "html"
             email.send()
             return redirect('verify_email_update')
             
@@ -187,11 +195,15 @@ def forgot_password(request):
         message = render_to_string('verification_email.html', {
             'user': user,
             'otp': otp,
-            'is_reset': True
+            'is_reset': True,
+            'purpose': 'reset',
+            'logo_url': request.build_absolute_uri('/static/img/favicon.png'),
+            'site_url': request.build_absolute_uri('/'),
         })
         email_msg = EmailMessage(
                     mail_subject, message, to=[email]
         )
+        email_msg.content_subtype = "html"
         email_msg.send()
         return redirect('forgot_password_verify')
         
