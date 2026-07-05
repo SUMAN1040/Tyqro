@@ -3,6 +3,9 @@
 {% block title %}Tyqro | Dashboard{% endblock %}
 
 {% block content %}
+<script id="dashboard-data" type="application/json">
+    {{ dashboard_data_json|safe }}
+</script>
 <div class="row mb-4">
     <div class="col-12">
         <h2 class="fw-bold mb-1">Hello, {{ user.first_name|default:user.username }} 👋</h2>

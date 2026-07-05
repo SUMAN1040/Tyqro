@@ -1,4 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // === Preloaded Dashboard Data ===
+    const embedEl = document.getElementById('dashboard-data');
+    let initialData = null;
+    if (embedEl) {
+        try {
+            initialData = JSON.parse(embedEl.textContent);
+        } catch (e) {
+            console.error("Error parsing initial dashboard data", e);
+        }
+    }
+
     // === UI Logic ===
     
     // Set Current Date
@@ -186,9 +197,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // Fetch initial status
+    // Fetch initial status (preloaded or fallback)
     if (startWorkBtn) {
-        fetchAPI('/attendance/status/').then(res => {
+        if (initialData && initialData.attendance) {
+            const res = initialData.attendance;
             if (res.is_active && res.start_time) {
                 startTimer(res.start_time);
             } else if (res.end_time) {
@@ -198,7 +210,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 endWorkBtn.disabled = true;
                 disableTodoInput();
             }
-        });
+        } else {
+            fetchAPI('/attendance/status/').then(res => {
+                if (res.is_active && res.start_time) {
+                    startTimer(res.start_time);
+                } else if (res.end_time) {
+                    // Already worked today
+                    timerDisplay.innerText = "Done for today";
+                    startWorkBtn.disabled = true;
+                    endWorkBtn.disabled = true;
+                    disableTodoInput();
+                }
+            });
+        }
 
         startWorkBtn.addEventListener('click', () => {
             const confirmed = confirm("Have you added all your tasks for today? You won't be able to add more after starting work.");
@@ -319,7 +343,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     if (addTodoBtn) {
-        loadTodos();
+        if (initialData && initialData.todos) {
+            todos = initialData.todos;
+            renderTodos();
+        } else {
+            loadTodos();
+        }
         addTodoBtn.addEventListener('click', () => {
             const title = newTodoInput.value.trim();
             if (title) {

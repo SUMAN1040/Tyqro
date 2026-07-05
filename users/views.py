@@ -8,6 +8,11 @@ from django.core.mail import EmailMessage
 from django.contrib.auth.models import User
 
 import random
+import json
+from django.utils import timezone
+from todos.models import Todo
+from attendance.models import Attendance
+from analytics.models import DailyPerformance
 
 def landing_page(request):
     if request.user.is_authenticated:
@@ -16,7 +21,73 @@ def landing_page(request):
 
 @login_required
 def dashboard(request):
-    return render(request, 'dashboard.html')
+    # Fetch initial data for dashboard
+    today = timezone.now().date()
+    
+    # 1. Todos
+    todos_qs = Todo.objects.filter(user=request.user, date=today).order_by('created_at').values('id', 'title', 'is_completed')
+    todos = list(todos_qs)
+    
+    # 2. Attendance
+    try:
+        attendance = Attendance.objects.get(user=request.user, date=today)
+        attendance_status = {
+            'is_active': attendance.is_active,
+            'start_time': attendance.start_time.isoformat() if attendance.start_time else None,
+            'end_time': attendance.end_time.isoformat() if attendance.end_time else None
+        }
+    except Attendance.DoesNotExist:
+        attendance_status = {'is_active': False, 'start_time': None, 'end_time': None}
+        
+    # 3. Heatmap / Analytics
+    now = timezone.now()
+    current_year = now.year
+    start_year = request.user.date_joined.year if request.user.date_joined else current_year
+    available_years = list(range(current_year, start_year - 1, -1))
+    if current_year not in available_years:
+        available_years.insert(0, current_year)
+        
+    performances = DailyPerformance.objects.filter(user=request.user, date__year=current_year)
+    year_todos = Todo.objects.filter(user=request.user, date__year=current_year)
+
+    data_map = {}
+    for perf in performances:
+        date_str = perf.date.isoformat()
+        data_map[date_str] = {
+            'date': date_str,
+            'hours': float(perf.hours_worked),
+            'tasks_completed': 0,
+            'total_tasks': 0
+        }
+        
+    for t in year_todos:
+        date_str = t.date.isoformat()
+        if date_str not in data_map:
+            data_map[date_str] = {
+                'date': date_str,
+                'hours': 0.0,
+                'tasks_completed': 0,
+                'total_tasks': 0
+            }
+        data_map[date_str]['total_tasks'] += 1
+        if t.is_completed:
+            data_map[date_str]['tasks_completed'] += 1
+
+    analytics = {
+        'status': 'success',
+        'data': list(data_map.values()),
+        'years': available_years,
+        'selected_year': current_year
+    }
+
+    # Combined payload
+    payload = {
+        'todos': todos,
+        'attendance': attendance_status,
+        'analytics': analytics
+    }
+    
+    return render(request, 'dashboard.html', {'dashboard_data_json': json.dumps(payload)})
 
 def login_view(request):
     if request.user.is_authenticated:
