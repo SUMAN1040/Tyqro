@@ -15,8 +15,12 @@ class UserSignupForm(forms.ModelForm):
 
     def clean_email(self):
         email = self.cleaned_data.get('email')
-        if User.objects.filter(email=email).exists():
-            raise forms.ValidationError("This email address is already in use.")
+        existing_user = User.objects.filter(email=email).first()
+        if existing_user:
+            if existing_user.is_active:
+                raise forms.ValidationError("This email address is already in use.")
+            else:
+                existing_user.delete()
         return email
 
     def clean(self):

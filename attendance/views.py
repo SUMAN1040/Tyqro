@@ -15,6 +15,9 @@ def start_work(request):
         except json.JSONDecodeError:
             data = {}
 
+        if Attendance.objects.filter(user=request.user, is_active=True).exists():
+            return JsonResponse({'status': 'error', 'message': 'Work already started'})
+
         attendance, created = Attendance.objects.get_or_create(user=request.user, date=today)
         if not attendance.start_time:
             attendance.start_time = timezone.now()
@@ -29,14 +32,13 @@ def start_work(request):
 @login_required
 def end_work(request):
     if request.method == 'POST':
-        today = timezone.now().date()
         try:
             data = json.loads(request.body)
         except json.JSONDecodeError:
             data = {}
 
         try:
-            attendance = Attendance.objects.get(user=request.user, date=today, is_active=True)
+            attendance = Attendance.objects.get(user=request.user, is_active=True)
             attendance.end_time = timezone.now()
             attendance.duration = attendance.end_time - attendance.start_time
             attendance.is_active = False
@@ -45,15 +47,11 @@ def end_work(request):
             attendance.save()
             
             from analytics.models import DailyPerformance
-            perf, _ = DailyPerformance.objects.get_or_create(user=request.user, date=today)
+            perf, _ = DailyPerformance.objects.get_or_create(user=request.user, date=attendance.date)
             perf.hours_worked = round(attendance.duration.total_seconds() / 3600.0, 2)
             perf.attendance_points = 100
             perf.total_points = perf.attendance_points
             perf.save()
-            
-            # Automatically clear all todo list items for today upon ending the work session
-            from todos.models import Todo
-            Todo.objects.filter(user=request.user, date=today).delete()
             
             return JsonResponse({'status': 'success', 'end_time': attendance.end_time.isoformat(), 'duration': str(attendance.duration)})
         except Attendance.DoesNotExist:

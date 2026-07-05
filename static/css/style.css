@@ -27,11 +27,10 @@ body {
 
 #wrapper {
     overflow-x: hidden;
+    min-width: 100vw;
 }
 
 /* Layout uses flex-column natively, no sidebar needed */
-    min-width: 100vw;
-}
 
 .card {
     background-color: var(--card-bg);

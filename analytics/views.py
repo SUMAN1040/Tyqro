@@ -27,8 +27,10 @@ def analytics_data(request):
     else:
         target_year = current_year
 
-    performances = DailyPerformance.objects.filter(user=request.user, date__year=target_year)
-    todos = Todo.objects.filter(user=request.user, date__year=target_year)
+    start_date = datetime.date(target_year, 1, 1)
+    end_date = datetime.date(target_year, 12, 31)
+    performances = DailyPerformance.objects.filter(user=request.user, date__range=(start_date, end_date))
+    todos = Todo.objects.filter(user=request.user, date__range=(start_date, end_date))
 
     data_map = {}
     

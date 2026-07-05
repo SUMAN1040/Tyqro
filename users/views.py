@@ -47,8 +47,11 @@ def dashboard(request):
     if current_year not in available_years:
         available_years.insert(0, current_year)
         
-    performances = DailyPerformance.objects.filter(user=request.user, date__year=current_year)
-    year_todos = Todo.objects.filter(user=request.user, date__year=current_year)
+    import datetime
+    start_date = datetime.date(current_year, 1, 1)
+    end_date = datetime.date(current_year, 12, 31)
+    performances = DailyPerformance.objects.filter(user=request.user, date__range=(start_date, end_date))
+    year_todos = Todo.objects.filter(user=request.user, date__range=(start_date, end_date))
 
     data_map = {}
     for perf in performances:
