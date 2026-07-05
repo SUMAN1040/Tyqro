@@ -29,6 +29,14 @@ class UserSignupForm(forms.ModelForm):
         password_confirm = cleaned_data.get("password_confirm")
         if password and password_confirm and password != password_confirm:
             self.add_error('password_confirm', "Passwords don't match")
+            
+        if password:
+            from django.contrib.auth.password_validation import validate_password
+            from django.core.exceptions import ValidationError
+            try:
+                validate_password(password)
+            except ValidationError as e:
+                self.add_error('password', e)
         return cleaned_data
 
     def save(self, commit=True):

@@ -6,7 +6,10 @@ from django.utils import timezone
 import datetime
 import json
 
+from django.db import transaction
+
 @login_required
+@transaction.atomic
 def start_work(request):
     if request.method == 'POST':
         today = timezone.now().date()
@@ -15,10 +18,15 @@ def start_work(request):
         except json.JSONDecodeError:
             data = {}
 
-        if Attendance.objects.filter(user=request.user, is_active=True).exists():
+        # Lock active session lookup to prevent concurrent starting of work
+        active_attendance = Attendance.objects.select_for_update().filter(user=request.user, is_active=True).first()
+        if active_attendance:
             return JsonResponse({'status': 'error', 'message': 'Work already started'})
 
         attendance, created = Attendance.objects.get_or_create(user=request.user, date=today)
+        # Acquire row lock on the attendance record
+        attendance = Attendance.objects.select_for_update().get(id=attendance.id)
+        
         if not attendance.start_time:
             attendance.start_time = timezone.now()
             attendance.is_active = True
@@ -30,6 +38,7 @@ def start_work(request):
     return JsonResponse({'status': 'error'}, status=400)
 
 @login_required
+@transaction.atomic
 def end_work(request):
     if request.method == 'POST':
         try:
@@ -38,7 +47,8 @@ def end_work(request):
             data = {}
 
         try:
-            attendance = Attendance.objects.get(user=request.user, is_active=True)
+            # Lock the active session to prevent double clock-outs
+            attendance = Attendance.objects.select_for_update().get(user=request.user, is_active=True)
             attendance.end_time = timezone.now()
             attendance.duration = attendance.end_time - attendance.start_time
             attendance.is_active = False
@@ -47,7 +57,7 @@ def end_work(request):
             attendance.save()
             
             from analytics.models import DailyPerformance
-            perf, _ = DailyPerformance.objects.get_or_create(user=request.user, date=attendance.date)
+            perf, _ = DailyPerformance.objects.select_for_update().get_or_create(user=request.user, date=attendance.date)
             perf.hours_worked = round(attendance.duration.total_seconds() / 3600.0, 2)
             perf.attendance_points = 100
             perf.total_points = perf.attendance_points

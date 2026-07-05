@@ -51,7 +51,13 @@ def dashboard(request):
     start_date = datetime.date(current_year, 1, 1)
     end_date = datetime.date(current_year, 12, 31)
     performances = DailyPerformance.objects.filter(user=request.user, date__range=(start_date, end_date))
-    year_todos = Todo.objects.filter(user=request.user, date__range=(start_date, end_date))
+    from django.db.models import Count, Q
+    year_todos = Todo.objects.filter(user=request.user, date__range=(start_date, end_date)) \
+        .values('date') \
+        .annotate(
+            total=Count('id'),
+            completed=Count('id', filter=Q(is_completed=True))
+        )
 
     data_map = {}
     for perf in performances:
@@ -63,8 +69,8 @@ def dashboard(request):
             'total_tasks': 0
         }
         
-    for t in year_todos:
-        date_str = t.date.isoformat()
+    for item in year_todos:
+        date_str = item['date'].isoformat()
         if date_str not in data_map:
             data_map[date_str] = {
                 'date': date_str,
@@ -72,9 +78,8 @@ def dashboard(request):
                 'tasks_completed': 0,
                 'total_tasks': 0
             }
-        data_map[date_str]['total_tasks'] += 1
-        if t.is_completed:
-            data_map[date_str]['tasks_completed'] += 1
+        data_map[date_str]['total_tasks'] = item['total']
+        data_map[date_str]['tasks_completed'] = item['completed']
 
     analytics = {
         'status': 'success',
@@ -306,6 +311,17 @@ def reset_password(request):
         else:
             try:
                 user = User.objects.get(email=email)
+                
+                # Check Django validation rules
+                from django.contrib.auth.password_validation import validate_password
+                from django.core.exceptions import ValidationError
+                try:
+                    validate_password(password, user)
+                except ValidationError as e:
+                    for error in e.messages:
+                        messages.error(request, error)
+                    return render(request, 'reset_password.html')
+
                 user.set_password(password)
                 user.save()
                 

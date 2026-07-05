@@ -30,7 +30,13 @@ def analytics_data(request):
     start_date = datetime.date(target_year, 1, 1)
     end_date = datetime.date(target_year, 12, 31)
     performances = DailyPerformance.objects.filter(user=request.user, date__range=(start_date, end_date))
-    todos = Todo.objects.filter(user=request.user, date__range=(start_date, end_date))
+    from django.db.models import Count, Q
+    todos = Todo.objects.filter(user=request.user, date__range=(start_date, end_date)) \
+        .values('date') \
+        .annotate(
+            total=Count('id'),
+            completed=Count('id', filter=Q(is_completed=True))
+        )
 
     data_map = {}
     
@@ -43,8 +49,8 @@ def analytics_data(request):
             'total_tasks': 0
         }
         
-    for t in todos:
-        date_str = t.date.isoformat()
+    for item in todos:
+        date_str = item['date'].isoformat()
         if date_str not in data_map:
             data_map[date_str] = {
                 'date': date_str,
@@ -52,9 +58,8 @@ def analytics_data(request):
                 'tasks_completed': 0,
                 'total_tasks': 0
             }
-        data_map[date_str]['total_tasks'] += 1
-        if t.is_completed:
-            data_map[date_str]['tasks_completed'] += 1
+        data_map[date_str]['total_tasks'] = item['total']
+        data_map[date_str]['tasks_completed'] = item['completed']
 
     data = list(data_map.values())
     return JsonResponse({'status': 'success', 'data': data, 'years': available_years, 'selected_year': target_year})
