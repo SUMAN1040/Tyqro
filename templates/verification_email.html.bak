@@ -1,0 +1,10 @@
+Hi {{ user.first_name }},
+
+Thank you for signing up for Tyqro. Your 6-digit email verification code is:
+
+{{ otp }}
+
+Please enter this code on the verification page to activate your account.
+If you did not sign up for an account, please ignore this email.
+
+Thanks!
