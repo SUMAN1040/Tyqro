@@ -190,6 +190,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 stopTimer();
                 timerDisplay.innerText = "Session Ended";
                 showToast('Work session ended successfully!');
+                
+                // Clear all todos on frontend when session is ended
+                todos = [];
+                renderTodos();
+                
                 if (typeof loadHeatmap === 'function') loadHeatmap(); // refresh charts
             } else {
                 showToast(res.message || 'Error ending work', true);
@@ -403,6 +408,11 @@ document.addEventListener('DOMContentLoaded', () => {
                          stopTimer();
                          timerDisplay.innerText = "Session Ended";
                          showToast("Your work session has been automatically ended at 6:00 PM.");
+
+                         // Clear all todos on frontend when session is ended
+                         todos = [];
+                         renderTodos();
+
                          localStorage.setItem('auto_end_date', todayStr);
                      }
                  });

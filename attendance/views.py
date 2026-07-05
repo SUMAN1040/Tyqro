@@ -51,6 +51,10 @@ def end_work(request):
             perf.total_points = perf.attendance_points
             perf.save()
             
+            # Automatically clear all todo list items for today upon ending the work session
+            from todos.models import Todo
+            Todo.objects.filter(user=request.user, date=today).delete()
+            
             return JsonResponse({'status': 'success', 'end_time': attendance.end_time.isoformat(), 'duration': str(attendance.duration)})
         except Attendance.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'No active work session'})
