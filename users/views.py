@@ -50,18 +50,11 @@ def signup_view(request):
             request.session['signup_user_id'] = user.id
             
             mail_subject = 'Your Tyqro Verification Code'
-            message = render_to_string('verification_email.html', {
-                'user': user,
-                'otp': otp,
-                'purpose': 'signup',
-                'logo_url': request.build_absolute_uri('/static/img/favicon.png'),
-                'site_url': request.build_absolute_uri('/'),
-            })
+            message = f"Hi {user.first_name},\n\nThank you for signing up for Tyqro. Your 6-digit email verification code is:\n\n{otp}\n\nPlease enter this code on the verification page to activate your account.\nIf you did not sign up for an account, please ignore this email.\n\nThanks!"
             to_email = form.cleaned_data.get('email')
             email = EmailMessage(
                         mail_subject, message, to=[to_email]
             )
-            email.content_subtype = "html"
             email.send()
             return redirect('verify_otp')
     else:
@@ -128,15 +121,8 @@ def update_profile(request):
             request.session['update_email_pending'] = new_email
             
             mail_subject = 'Verify Your New Email Address'
-            message = render_to_string('verification_email.html', {
-                'user': user,
-                'otp': otp,
-                'purpose': 'update_email',
-                'logo_url': request.build_absolute_uri('/static/img/favicon.png'),
-                'site_url': request.build_absolute_uri('/'),
-            })
+            message = f"Hi {user.first_name},\n\nWe received a request to update the email address associated with your Tyqro profile. Please confirm this change by entering the verification code below.\n\nYour 6-digit verification code is:\n\n{otp}\n\nIf you did not initiate this request, please ignore this email.\n\nThanks!"
             email = EmailMessage(mail_subject, message, to=[new_email])
-            email.content_subtype = "html"
             email.send()
             return redirect('verify_email_update')
             
@@ -192,18 +178,10 @@ def forgot_password(request):
         request.session['reset_email'] = email
         
         mail_subject = 'Tyqro Password Reset Code'
-        message = render_to_string('verification_email.html', {
-            'user': user,
-            'otp': otp,
-            'is_reset': True,
-            'purpose': 'reset',
-            'logo_url': request.build_absolute_uri('/static/img/favicon.png'),
-            'site_url': request.build_absolute_uri('/'),
-        })
+        message = f"Hi {user.first_name},\n\nA request was made to reset the password for your Tyqro account. Use the authorization code below to complete the reset.\n\nYour 6-digit password reset code is:\n\n{otp}\n\nIf you did not initiate this request, please ignore this email.\n\nThanks!"
         email_msg = EmailMessage(
                     mail_subject, message, to=[email]
         )
-        email_msg.content_subtype = "html"
         email_msg.send()
         return redirect('forgot_password_verify')
         
