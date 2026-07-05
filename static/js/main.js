@@ -158,6 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
         startWorkBtn.disabled = true;
         endWorkBtn.disabled = false;
         disableTodoInput();
+        renderTodos();
         
         // Auto-end check
         checkAutoEnd();
@@ -169,6 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         startWorkBtn.disabled = true;
         endWorkBtn.disabled = true;
         disableTodoInput();
+        renderTodos();
     };
 
     const submitStartWork = (reason = null) => {
@@ -191,10 +193,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 timerDisplay.innerText = "Session Ended";
                 showToast('Work session ended successfully!');
                 
-                // Clear all todos on frontend when session is ended
-                todos = [];
-                renderTodos();
-                
                 if (typeof loadHeatmap === 'function') loadHeatmap(); // refresh charts
             } else {
                 showToast(res.message || 'Error ending work', true);
@@ -214,6 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 startWorkBtn.disabled = true;
                 endWorkBtn.disabled = true;
                 disableTodoInput();
+                renderTodos();
             }
         } else {
             fetchAPI('/attendance/status/').then(res => {
@@ -225,6 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     startWorkBtn.disabled = true;
                     endWorkBtn.disabled = true;
                     disableTodoInput();
+                    renderTodos();
                 }
             });
         }
@@ -285,6 +285,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
+        const isSessionActive = workStartTime !== null;
+        const isSessionEnded = startWorkBtn && startWorkBtn.disabled && endWorkBtn && endWorkBtn.disabled;
+        
         let completed = 0;
         todos.forEach(todo => {
             if (todo.is_completed) completed++;
@@ -292,25 +295,28 @@ document.addEventListener('DOMContentLoaded', () => {
             const div = document.createElement('div');
             div.className = 'todo-item d-flex align-items-center justify-content-between p-3 mb-2 border';
             
+            const checkboxDisabledAttr = isSessionActive ? '' : 'disabled';
+            const deleteDisabledAttr = isSessionEnded ? 'disabled style="pointer-events: none; opacity: 0.5;"' : '';
+            
             div.innerHTML = `
                 <div class="d-flex align-items-center gap-3">
-                    <input class="form-check-input todo-checkbox m-0" type="checkbox" ${todo.is_completed ? 'checked' : ''} data-id="${todo.id}">
+                    <input class="form-check-input todo-checkbox m-0" type="checkbox" ${todo.is_completed ? 'checked' : ''} ${checkboxDisabledAttr} data-id="${todo.id}">
                     <span class="todo-text fw-medium ${todo.is_completed ? 'completed' : ''}">${todo.title}</span>
                 </div>
-                <button class="btn btn-link text-danger p-0 delete-todo" data-id="${todo.id}"><i class="bi bi-trash"></i></button>
+                <button class="btn btn-link text-danger p-0 delete-todo" ${deleteDisabledAttr} data-id="${todo.id}"><i class="bi bi-trash"></i></button>
             `;
             todoListEl.appendChild(div);
         });
         todoProgress.innerText = `${completed}/${todos.length}`;
 
         // Listeners
-        document.querySelectorAll('.todo-checkbox').forEach(cb => {
+        document.querySelectorAll('.todo-checkbox:not([disabled])').forEach(cb => {
             cb.addEventListener('change', (e) => {
                 const id = e.target.getAttribute('data-id');
                 toggleTodo(id);
             });
         });
-        document.querySelectorAll('.delete-todo').forEach(btn => {
+        document.querySelectorAll('.delete-todo:not([disabled])').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = e.currentTarget.getAttribute('data-id');
                 deleteTodo(id);

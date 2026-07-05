@@ -30,6 +30,11 @@ def add_todo(request):
 @login_required
 def toggle_todo(request, todo_id):
     if request.method == 'POST':
+        # Can only toggle todos if the work session is active
+        from attendance.models import Attendance
+        if not Attendance.objects.filter(user=request.user, is_active=True).exists():
+            return JsonResponse({'status': 'error', 'message': 'Cannot complete tasks unless work session is active.'}, status=400)
+
         try:
             todo = Todo.objects.get(id=todo_id, user=request.user)
             todo.is_completed = not todo.is_completed
@@ -42,6 +47,12 @@ def toggle_todo(request, todo_id):
 @login_required
 def delete_todo(request, todo_id):
     if request.method == 'POST':
+        # Cannot delete tasks after ending work for today
+        from attendance.models import Attendance
+        today = timezone.now().date()
+        if Attendance.objects.filter(user=request.user, date=today, is_active=False, end_time__isnull=False).exists():
+            return JsonResponse({'status': 'error', 'message': 'Cannot delete tasks after ending work.'}, status=400)
+
         try:
             todo = Todo.objects.get(id=todo_id, user=request.user)
             todo.delete()
