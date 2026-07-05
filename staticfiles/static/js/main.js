@@ -364,8 +364,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 5 PM Auto End
-        if (hrs === 17 && mins === 0 && workStartTime) {
+        // 6 PM Auto End
+        if (hrs === 18 && mins === 0 && workStartTime) {
              const lastAutoEnded = localStorage.getItem('auto_end_date');
              const todayStr = now.toDateString();
              if (lastAutoEnded !== todayStr) {
@@ -373,7 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
                      if (res.status === 'success') {
                          stopTimer();
                          timerDisplay.innerText = "Session Ended";
-                         showToast("Your work session has been automatically ended at 5:00 PM.");
+                         showToast("Your work session has been automatically ended at 6:00 PM.");
                          localStorage.setItem('auto_end_date', todayStr);
                      }
                  });

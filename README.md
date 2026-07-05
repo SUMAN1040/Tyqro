@@ -11,7 +11,7 @@ Tyqro is a modern productivity and attendance tracking web application, designed
 - **Attendance Tracking**: A live work timer that persists seamlessly across browser reloads and sessions.
 - **Task Management (Todos)**: Fully AJAX-driven Todo list supporting seamless creation, toggling, and deletion without page reloads.
 - **Performance Heatmap**: A GitHub-style contribution graph utilizing Chart.js to visualize daily performance, active hours, and points earned throughout the year. It includes a dynamic year-selection filter.
-- **Smart Automation**: Client-side monitoring for auto-ending sessions at 5:00 PM and browser notifications for start-of-day reminders at 9:00 AM.
+- **Smart Automation**: Client-side monitoring for auto-ending sessions at 6:00 PM and browser notifications for start-of-day reminders at 9:00 AM.
 
 ## Tech Stack
 
