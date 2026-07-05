@@ -20,7 +20,11 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Trusted origins for CSRF (Django 4.0+)
-CSRF_TRUSTED_ORIGINS = ['https://*.vercel.app']
+csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS')
+if csrf_origins:
+    CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_origins.split(',')]
+else:
+    CSRF_TRUSTED_ORIGINS = ['https://*.vercel.app']
 
 # Production Security Settings (Enabled when DEBUG is False)
 if not DEBUG:
