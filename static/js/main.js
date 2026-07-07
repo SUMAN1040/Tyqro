@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const updateTimerDisplay = () => {
+    function updateTimerDisplay() {
         if (!workStartTime) return;
         const now = new Date();
         
@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const updateBreakDisplay = () => {
+    function updateBreakDisplay() {
         let totalElapsedMs = totalBreakSeconds * 1000;
         if (currentBreakStart) {
             const now = new Date();
@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const disableTodoInput = () => {
+    function disableTodoInput() {
         const newTodoInput = document.getElementById('newTodoInput');
         const addTodoBtn = document.getElementById('addTodoBtn');
         if (newTodoInput) {
@@ -210,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const startTimer = (startTimeISO, totalBreakDurationSeconds = 0, currentBreakStartISO = null) => {
+    function startTimer(startTimeISO, totalBreakDurationSeconds = 0, currentBreakStartISO = null) {
         workStartTime = new Date(startTimeISO);
         totalBreakSeconds = totalBreakDurationSeconds;
         currentBreakStart = currentBreakStartISO ? new Date(currentBreakStartISO) : null;
@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
         checkAutoEnd();
     };
 
-    const stopTimer = () => {
+    function stopTimer() {
         if (timerInterval) clearInterval(timerInterval);
         if (breakInterval) clearInterval(breakInterval);
         workStartTime = null;
@@ -281,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTodos();
     };
 
-    const submitStartWork = (reason = null) => {
+    function submitStartWork(reason = null) {
         const payload = reason ? { late_reason: reason } : null;
         fetchAPI('/attendance/start/', 'POST', payload).then(res => {
             if (res.status === 'success') {
@@ -293,7 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const submitEndWork = (reason = null) => {
+    function submitEndWork(reason = null) {
         const payload = reason ? { early_leave_reason: reason } : null;
         fetchAPI('/attendance/end/', 'POST', payload).then(res => {
             if (res.status === 'success') {
@@ -445,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let todos = [];
 
-    const renderTodos = () => {
+    function renderTodos() {
         if (!todoListEl) return;
         todoListEl.innerHTML = '';
         if (todos.length === 0) {
@@ -493,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const loadTodos = () => {
+    function loadTodos() {
         if (!todoListEl) return;
         fetchAPI('/todos/list/').then(res => {
             if (res.todos) {
@@ -503,7 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const toggleTodo = (id) => {
+    function toggleTodo(id) {
         fetchAPI(`/todos/toggle/${id}/`, 'POST').then(res => {
             if (res.status === 'success') {
                 const todo = todos.find(t => t.id == id);
@@ -513,7 +513,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const deleteTodo = (id) => {
+    function deleteTodo(id) {
         fetchAPI(`/todos/delete/${id}/`, 'POST').then(res => {
             if (res.status === 'success') {
                 todos = todos.filter(t => t.id != id);
