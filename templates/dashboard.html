@@ -19,10 +19,32 @@
         <div class="card h-100 border-0 shadow-sm rounded-4">
             <div class="card-body p-4 d-flex flex-column align-items-center justify-content-center text-center">
                 <h5 class="fw-bold mb-4">Work Attendance</h5>
+                <div class="text-muted small fw-medium text-uppercase mb-1">Total Work Time</div>
                 <div class="display-4 fw-bold text-primary mb-3 timer-display font-monospace" id="timerDisplay">00:00:00</div>
+                <div id="breakDisplayContainer" class="d-none w-100 mb-3">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <div id="breakCard" class="p-2 bg-warning-subtle text-warning border border-warning-subtle rounded-3 text-center" style="transition: opacity 0.3s ease;">
+                                <div class="small fw-semibold text-uppercase" style="font-size: 0.75rem;"><i class="bi bi-cup-hot me-1"></i> Break</div>
+                                <div id="breakTimerDisplay" class="font-monospace fw-bold">00:00:00</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div id="netCard" class="p-2 bg-success-subtle text-success border border-success-subtle rounded-3 text-center" style="transition: opacity 0.3s ease;">
+                                <div class="small fw-semibold text-uppercase" style="font-size: 0.75rem;"><i class="bi bi-briefcase me-1"></i> Net Work</div>
+                                <div id="netTimerDisplay" class="font-monospace fw-bold">00:00:00</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="d-flex gap-2 w-100 mb-3">
                     <button class="btn btn-primary flex-grow-1 py-2 fw-medium rounded-pill" id="startWorkBtn">Start Work</button>
                     <button class="btn btn-outline-danger flex-grow-1 py-2 fw-medium rounded-pill" id="endWorkBtn" disabled>End Work</button>
+                </div>
+                <div class="w-100 d-none" id="breakActionContainer">
+                    <button class="btn btn-warning w-100 py-2 fw-medium rounded-pill d-flex align-items-center justify-content-center gap-2" id="breakBtn">
+                        <i class="bi bi-pause-fill"></i> Go on Break
+                    </button>
                 </div>
             </div>
         </div>
