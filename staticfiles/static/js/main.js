@@ -82,23 +82,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const endWorkBtn = document.getElementById('endWorkBtn');
     const timerDisplay = document.getElementById('timerDisplay');
     
-    // Break Elements
-    const breakDisplayContainer = document.getElementById('breakDisplayContainer');
-    const breakTimerDisplay = document.getElementById('breakTimerDisplay');
-    const netTimerDisplay = document.getElementById('netTimerDisplay');
-    const breakCard = document.getElementById('breakCard');
-    const netCard = document.getElementById('netCard');
-    const breakActionContainer = document.getElementById('breakActionContainer');
-    const breakBtn = document.getElementById('breakBtn');
+    // (Break Elements removed)
 
     let timerInterval = null;
     let workStartTime = null;
     
-    // Break states
-    let totalBreakSeconds = 0;
-    let currentBreakStart = null;
-    let isBreakActive = false;
-    let breakInterval = null;
+    // (Break states removed)
     
     // Modal Elements
     const reasonModalEl = document.getElementById('reasonModal');
@@ -143,60 +132,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!workStartTime) return;
         const now = new Date();
         
-        // 1. Total Work Time (always runs, does not stop on break)
-        let diffTotal = now - workStartTime;
-        if (diffTotal < 0) diffTotal = 0;
+        let diff = now - workStartTime;
+        if (diff < 0) diff = 0;
         
-        const totalHrs = Math.floor(diffTotal / 3600000);
-        const totalMins = Math.floor((diffTotal % 3600000) / 60000);
-        const totalSecs = Math.floor((diffTotal % 60000) / 1000);
+        const hrs = Math.floor(diff / 3600000);
+        const mins = Math.floor((diff % 3600000) / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
         
         timerDisplay.innerText = 
-            String(totalHrs).padStart(2, '0') + ':' + 
-            String(totalMins).padStart(2, '0') + ':' + 
-            String(totalSecs).padStart(2, '0');
+            String(hrs).padStart(2, '0') + ':' + 
+            String(mins).padStart(2, '0') + ':' + 
+            String(secs).padStart(2, '0');
+    }
 
-        // 2. Net Work Time (Total Work Time - Break Time)
-        let totalBreakMs = totalBreakSeconds * 1000;
-        if (currentBreakStart) {
-            totalBreakMs += (now - currentBreakStart);
-        }
-        if (totalBreakMs < 0) totalBreakMs = 0;
-
-        let diffNet = diffTotal - totalBreakMs;
-        if (diffNet < 0) diffNet = 0;
-
-        const netHrs = Math.floor(diffNet / 3600000);
-        const netMins = Math.floor((diffNet % 3600000) / 60000);
-        const netSecs = Math.floor((diffNet % 60000) / 1000);
-
-        if (netTimerDisplay) {
-            netTimerDisplay.innerText = 
-                String(netHrs).padStart(2, '0') + ':' + 
-                String(netMins).padStart(2, '0') + ':' + 
-                String(netSecs).padStart(2, '0');
-        }
-    };
-
-    function updateBreakDisplay() {
-        let totalElapsedMs = totalBreakSeconds * 1000;
-        if (currentBreakStart) {
-            const now = new Date();
-            totalElapsedMs += (now - currentBreakStart);
-        }
-        if (totalElapsedMs < 0) totalElapsedMs = 0;
-        
-        const hrs = Math.floor(totalElapsedMs / 3600000);
-        const mins = Math.floor((totalElapsedMs % 3600000) / 60000);
-        const secs = Math.floor((totalElapsedMs % 60000) / 1000);
-        
-        if (breakTimerDisplay) {
-            breakTimerDisplay.innerText = 
-                String(hrs).padStart(2, '0') + ':' + 
-                String(mins).padStart(2, '0') + ':' + 
-                String(secs).padStart(2, '0');
-        }
-    };
+    // (updateBreakDisplay removed)
 
     function disableTodoInput() {
         const newTodoInput = document.getElementById('newTodoInput');
@@ -210,49 +159,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    function startTimer(startTimeISO, totalBreakDurationSeconds = 0, currentBreakStartISO = null) {
+    function startTimer(startTimeISO) {
         workStartTime = new Date(startTimeISO);
-        totalBreakSeconds = totalBreakDurationSeconds;
-        currentBreakStart = currentBreakStartISO ? new Date(currentBreakStartISO) : null;
         
         if (timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(updateTimerDisplay, 1000);
         updateTimerDisplay();
-        
-        // Show break controls
-        if (breakActionContainer) breakActionContainer.classList.remove('d-none');
-        if (breakDisplayContainer) breakDisplayContainer.classList.remove('d-none');
-        
-        // Setup initial break button and state
-        if (currentBreakStart) {
-            isBreakActive = true;
-            if (breakBtn) {
-                breakBtn.innerHTML = '<i class="bi bi-play-fill"></i> Resume Work';
-                breakBtn.className = 'btn btn-success w-100 py-2 fw-medium rounded-pill d-flex align-items-center justify-content-center gap-2';
-            }
-            if (breakInterval) clearInterval(breakInterval);
-            breakInterval = setInterval(updateBreakDisplay, 1000);
-            updateBreakDisplay();
-            // Highlight Break, dim Net Work
-            if (breakCard) breakCard.style.opacity = '1';
-            if (netCard) netCard.style.opacity = '0.5';
-            // Ensure main timer is highlighted
-            timerDisplay.classList.remove('text-muted');
-            timerDisplay.classList.add('text-primary');
-        } else {
-            isBreakActive = false;
-            if (breakBtn) {
-                breakBtn.innerHTML = '<i class="bi bi-pause-fill"></i> Go on Break';
-                breakBtn.className = 'btn btn-warning w-100 py-2 fw-medium rounded-pill d-flex align-items-center justify-content-center gap-2';
-            }
-            updateBreakDisplay();
-            // Highlight Net Work, dim Break
-            if (breakCard) breakCard.style.opacity = '0.5';
-            if (netCard) netCard.style.opacity = '1';
-            // Ensure main timer is highlighted
-            timerDisplay.classList.remove('text-muted');
-            timerDisplay.classList.add('text-primary');
-        }
         
         startWorkBtn.disabled = true;
         endWorkBtn.disabled = false;
@@ -261,25 +173,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Auto-end check
         checkAutoEnd();
-    };
+    }
 
     function stopTimer() {
         if (timerInterval) clearInterval(timerInterval);
-        if (breakInterval) clearInterval(breakInterval);
         workStartTime = null;
-        totalBreakSeconds = 0;
-        currentBreakStart = null;
-        isBreakActive = false;
-        
-        // Hide break controls
-        if (breakActionContainer) breakActionContainer.classList.add('d-none');
-        if (breakDisplayContainer) breakDisplayContainer.classList.add('d-none');
         
         startWorkBtn.disabled = true;
         endWorkBtn.disabled = true;
         disableTodoInput();
         renderTodos();
-    };
+    }
 
     function submitStartWork(reason = null) {
         const payload = reason ? { late_reason: reason } : null;
@@ -313,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (initialData && initialData.attendance) {
             const res = initialData.attendance;
             if (res.is_active && res.start_time) {
-                startTimer(res.start_time, res.total_break_duration || 0, res.current_break_start);
+                startTimer(res.start_time);
             } else if (res.end_time) {
                 // Already worked today
                 timerDisplay.innerText = "Done for today";
@@ -325,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             fetchAPI('/attendance/status/').then(res => {
                 if (res.is_active && res.start_time) {
-                    startTimer(res.start_time, res.total_break_duration || 0, res.current_break_start);
+                    startTimer(res.start_time);
                 } else if (res.end_time) {
                     // Already worked today
                     timerDisplay.innerText = "Done for today";
@@ -373,66 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        if (breakBtn) {
-            breakBtn.addEventListener('click', () => {
-                if (!isBreakActive) {
-                    // Go on break
-                    fetchAPI('/attendance/start-break/', 'POST').then(res => {
-                        if (res.status === 'success') {
-                            currentBreakStart = new Date(res.current_break_start);
-                            totalBreakSeconds = res.total_break_duration;
-                            isBreakActive = true;
-                            
-                            breakBtn.innerHTML = '<i class="bi bi-play-fill"></i> Resume Work';
-                            breakBtn.className = 'btn btn-success w-100 py-2 fw-medium rounded-pill d-flex align-items-center justify-content-center gap-2';
-                            
-                            if (breakInterval) clearInterval(breakInterval);
-                            breakInterval = setInterval(updateBreakDisplay, 1000);
-                            updateBreakDisplay();
-                            
-                            // Highlight Break, dim Net Work
-                            if (breakCard) breakCard.style.opacity = '1';
-                            if (netCard) netCard.style.opacity = '0.5';
-                            // Ensure main timer is highlighted
-                            timerDisplay.classList.remove('text-muted');
-                            timerDisplay.classList.add('text-primary');
-                            updateTimerDisplay(); // immediate update
-                            
-                            showToast('You are now on break.');
-                        } else {
-                            showToast(res.message || 'Error starting break', true);
-                        }
-                    });
-                } else {
-                    // Resume work
-                    fetchAPI('/attendance/end-break/', 'POST').then(res => {
-                        if (res.status === 'success') {
-                            currentBreakStart = null;
-                            totalBreakSeconds = res.total_break_duration;
-                            isBreakActive = false;
-                            
-                            breakBtn.innerHTML = '<i class="bi bi-pause-fill"></i> Go on Break';
-                            breakBtn.className = 'btn btn-warning w-100 py-2 fw-medium rounded-pill d-flex align-items-center justify-content-center gap-2';
-                            
-                            if (breakInterval) clearInterval(breakInterval);
-                            updateBreakDisplay(); // immediate update to show paused value
-                            
-                            // Highlight Net Work, dim Break
-                            if (breakCard) breakCard.style.opacity = '0.5';
-                            if (netCard) netCard.style.opacity = '1';
-                            // Ensure main timer is highlighted
-                            timerDisplay.classList.remove('text-muted');
-                            timerDisplay.classList.add('text-primary');
-                            updateTimerDisplay(); // immediate update
-                            
-                            showToast('Work session resumed.');
-                        } else {
-                            showToast(res.message || 'Error ending break', true);
-                        }
-                    });
-                }
-            });
-        }
+        // (breakBtn event listener removed)
     }
 
 
