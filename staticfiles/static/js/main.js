@@ -547,7 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // === Auto-Schedule Logic ===
-    const checkSchedule = () => {
+    function checkSchedule() {
         const now = new Date();
         const hrs = now.getHours();
         const mins = now.getMinutes();
@@ -595,7 +595,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const checkAutoEnd = () => {
+    function checkAutoEnd() {
         setInterval(checkSchedule, 60000); // Check every minute
         checkSchedule(); // initial check
     };
@@ -606,7 +606,7 @@ document.addEventListener('DOMContentLoaded', () => {
     checkSchedule();
 
     // === Analog Clock Logic ===
-    const setClock = () => {
+    function setClock() {
         const now = new Date();
         const seconds = now.getSeconds();
         const secondsDegrees = ((seconds / 60) * 360) - 90;
