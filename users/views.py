@@ -34,10 +34,18 @@ def dashboard(request):
         attendance_status = {
             'is_active': attendance.is_active,
             'start_time': attendance.start_time.isoformat() if attendance.start_time else None,
-            'end_time': attendance.end_time.isoformat() if attendance.end_time else None
+            'end_time': attendance.end_time.isoformat() if attendance.end_time else None,
+            'total_break_duration': attendance.total_break_duration.total_seconds(),
+            'current_break_start': attendance.current_break_start.isoformat() if attendance.current_break_start else None
         }
     except Attendance.DoesNotExist:
-        attendance_status = {'is_active': False, 'start_time': None, 'end_time': None}
+        attendance_status = {
+            'is_active': False,
+            'start_time': None,
+            'end_time': None,
+            'total_break_duration': 0,
+            'current_break_start': None
+        }
         
     # 3. Heatmap / Analytics
     now = timezone.now()

@@ -136,5 +136,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    loadHeatmap();
+    // Read from preloaded script block if available
+    const embedEl = document.getElementById('dashboard-data');
+    let initialData = null;
+    if (embedEl) {
+        try {
+            initialData = JSON.parse(embedEl.textContent);
+        } catch (e) {
+            console.error("Error parsing initial dashboard data for charts", e);
+        }
+    }
+
+    if (initialData && initialData.analytics) {
+        const res = initialData.analytics;
+        if (res.status === 'success') {
+            renderHeatmap(res.data, res.selected_year);
+            renderYearSelector(res.years, res.selected_year);
+        }
+    } else {
+        loadHeatmap();
+    }
 });

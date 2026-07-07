@@ -19,10 +19,20 @@
         <div class="card h-100 border-0 shadow-sm rounded-4">
             <div class="card-body p-4 d-flex flex-column align-items-center justify-content-center text-center">
                 <h5 class="fw-bold mb-4">Work Attendance</h5>
-                <div class="display-4 fw-bold text-primary mb-4 timer-display font-monospace" id="timerDisplay">00:00:00</div>
-                <div class="d-flex gap-2 w-100">
+                <div class="display-4 fw-bold text-primary mb-3 timer-display font-monospace" id="timerDisplay">00:00:00</div>
+                <div id="breakDisplayContainer" class="d-none mb-3">
+                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2 rounded-pill fw-semibold">
+                        <i class="bi bi-cup-hot me-1"></i> Break: <span id="breakTimerDisplay" class="font-monospace">00:00:00</span>
+                    </span>
+                </div>
+                <div class="d-flex gap-2 w-100 mb-3">
                     <button class="btn btn-primary flex-grow-1 py-2 fw-medium rounded-pill" id="startWorkBtn">Start Work</button>
                     <button class="btn btn-outline-danger flex-grow-1 py-2 fw-medium rounded-pill" id="endWorkBtn" disabled>End Work</button>
+                </div>
+                <div class="w-100 d-none" id="breakActionContainer">
+                    <button class="btn btn-warning w-100 py-2 fw-medium rounded-pill d-flex align-items-center justify-content-center gap-2" id="breakBtn">
+                        <i class="bi bi-pause-fill"></i> Go on Break
+                    </button>
                 </div>
             </div>
         </div>

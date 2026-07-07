@@ -81,8 +81,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const startWorkBtn = document.getElementById('startWorkBtn');
     const endWorkBtn = document.getElementById('endWorkBtn');
     const timerDisplay = document.getElementById('timerDisplay');
+    
+    // Break Elements
+    const breakDisplayContainer = document.getElementById('breakDisplayContainer');
+    const breakTimerDisplay = document.getElementById('breakTimerDisplay');
+    const breakActionContainer = document.getElementById('breakActionContainer');
+    const breakBtn = document.getElementById('breakBtn');
+
     let timerInterval = null;
     let workStartTime = null;
+    
+    // Break states
+    let totalBreakSeconds = 0;
+    let currentBreakStart = null;
+    let isBreakActive = false;
+    let breakInterval = null;
     
     // Modal Elements
     const reasonModalEl = document.getElementById('reasonModal');
@@ -126,7 +139,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateTimerDisplay = () => {
         if (!workStartTime) return;
         const now = new Date();
-        const diff = now - workStartTime; // ms
+        
+        let diff;
+        if (currentBreakStart) {
+            // Paused at the moment break started
+            diff = currentBreakStart - workStartTime - (totalBreakSeconds * 1000);
+        } else {
+            // Running: current time minus start time minus total break seconds
+            diff = now - workStartTime - (totalBreakSeconds * 1000);
+        }
+        if (diff < 0) diff = 0;
         
         const hrs = Math.floor(diff / 3600000);
         const mins = Math.floor((diff % 3600000) / 60000);
@@ -136,6 +158,26 @@ document.addEventListener('DOMContentLoaded', () => {
             String(hrs).padStart(2, '0') + ':' + 
             String(mins).padStart(2, '0') + ':' + 
             String(secs).padStart(2, '0');
+    };
+
+    const updateBreakDisplay = () => {
+        let totalElapsedMs = totalBreakSeconds * 1000;
+        if (currentBreakStart) {
+            const now = new Date();
+            totalElapsedMs += (now - currentBreakStart);
+        }
+        if (totalElapsedMs < 0) totalElapsedMs = 0;
+        
+        const hrs = Math.floor(totalElapsedMs / 3600000);
+        const mins = Math.floor((totalElapsedMs % 3600000) / 60000);
+        const secs = Math.floor((totalElapsedMs % 60000) / 1000);
+        
+        if (breakTimerDisplay) {
+            breakTimerDisplay.innerText = 
+                String(hrs).padStart(2, '0') + ':' + 
+                String(mins).padStart(2, '0') + ':' + 
+                String(secs).padStart(2, '0');
+        }
     };
 
     const disableTodoInput = () => {
@@ -150,11 +192,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const startTimer = (startTimeISO) => {
+    const startTimer = (startTimeISO, totalBreakDurationSeconds = 0, currentBreakStartISO = null) => {
         workStartTime = new Date(startTimeISO);
+        totalBreakSeconds = totalBreakDurationSeconds;
+        currentBreakStart = currentBreakStartISO ? new Date(currentBreakStartISO) : null;
+        
         if (timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(updateTimerDisplay, 1000);
         updateTimerDisplay();
+        
+        // Show break controls
+        if (breakActionContainer) breakActionContainer.classList.remove('d-none');
+        if (breakDisplayContainer) breakDisplayContainer.classList.remove('d-none');
+        
+        // Setup initial break button and state
+        if (currentBreakStart) {
+            isBreakActive = true;
+            if (breakBtn) {
+                breakBtn.innerHTML = '<i class="bi bi-play-fill"></i> Resume Work';
+                breakBtn.className = 'btn btn-success w-100 py-2 fw-medium rounded-pill d-flex align-items-center justify-content-center gap-2';
+            }
+            if (breakInterval) clearInterval(breakInterval);
+            breakInterval = setInterval(updateBreakDisplay, 1000);
+            updateBreakDisplay();
+            // Dim the main timer when on break
+            timerDisplay.classList.remove('text-primary');
+            timerDisplay.classList.add('text-muted');
+        } else {
+            isBreakActive = false;
+            if (breakBtn) {
+                breakBtn.innerHTML = '<i class="bi bi-pause-fill"></i> Go on Break';
+                breakBtn.className = 'btn btn-warning w-100 py-2 fw-medium rounded-pill d-flex align-items-center justify-content-center gap-2';
+            }
+            updateBreakDisplay();
+            // Ensure main timer is highlighted
+            timerDisplay.classList.remove('text-muted');
+            timerDisplay.classList.add('text-primary');
+        }
+        
         startWorkBtn.disabled = true;
         endWorkBtn.disabled = false;
         disableTodoInput();
@@ -166,7 +241,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const stopTimer = () => {
         if (timerInterval) clearInterval(timerInterval);
+        if (breakInterval) clearInterval(breakInterval);
         workStartTime = null;
+        totalBreakSeconds = 0;
+        currentBreakStart = null;
+        isBreakActive = false;
+        
+        // Hide break controls
+        if (breakActionContainer) breakActionContainer.classList.add('d-none');
+        if (breakDisplayContainer) breakDisplayContainer.classList.add('d-none');
+        
         startWorkBtn.disabled = true;
         endWorkBtn.disabled = true;
         disableTodoInput();
@@ -177,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const payload = reason ? { late_reason: reason } : null;
         fetchAPI('/attendance/start/', 'POST', payload).then(res => {
             if (res.status === 'success') {
-                startTimer(res.start_time);
+                startTimer(res.start_time, 0, null);
                 showToast('Work session started!');
             } else {
                 showToast(res.message || 'Error starting work', true);
@@ -205,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (initialData && initialData.attendance) {
             const res = initialData.attendance;
             if (res.is_active && res.start_time) {
-                startTimer(res.start_time);
+                startTimer(res.start_time, res.total_break_duration || 0, res.current_break_start);
             } else if (res.end_time) {
                 // Already worked today
                 timerDisplay.innerText = "Done for today";
@@ -217,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             fetchAPI('/attendance/status/').then(res => {
                 if (res.is_active && res.start_time) {
-                    startTimer(res.start_time);
+                    startTimer(res.start_time, res.total_break_duration || 0, res.current_break_start);
                 } else if (res.end_time) {
                     // Already worked today
                     timerDisplay.innerText = "Done for today";
@@ -264,6 +348,59 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitEndWork();
             }
         });
+
+        if (breakBtn) {
+            breakBtn.addEventListener('click', () => {
+                if (!isBreakActive) {
+                    // Go on break
+                    fetchAPI('/attendance/start-break/', 'POST').then(res => {
+                        if (res.status === 'success') {
+                            currentBreakStart = new Date(res.current_break_start);
+                            totalBreakSeconds = res.total_break_duration;
+                            isBreakActive = true;
+                            
+                            breakBtn.innerHTML = '<i class="bi bi-play-fill"></i> Resume Work';
+                            breakBtn.className = 'btn btn-success w-100 py-2 fw-medium rounded-pill d-flex align-items-center justify-content-center gap-2';
+                            
+                            if (breakInterval) clearInterval(breakInterval);
+                            breakInterval = setInterval(updateBreakDisplay, 1000);
+                            updateBreakDisplay();
+                            
+                            timerDisplay.classList.remove('text-primary');
+                            timerDisplay.classList.add('text-muted');
+                            updateTimerDisplay(); // immediate update to pause it
+                            
+                            showToast('You are now on break.');
+                        } else {
+                            showToast(res.message || 'Error starting break', true);
+                        }
+                    });
+                } else {
+                    // Resume work
+                    fetchAPI('/attendance/end-break/', 'POST').then(res => {
+                        if (res.status === 'success') {
+                            currentBreakStart = null;
+                            totalBreakSeconds = res.total_break_duration;
+                            isBreakActive = false;
+                            
+                            breakBtn.innerHTML = '<i class="bi bi-pause-fill"></i> Go on Break';
+                            breakBtn.className = 'btn btn-warning w-100 py-2 fw-medium rounded-pill d-flex align-items-center justify-content-center gap-2';
+                            
+                            if (breakInterval) clearInterval(breakInterval);
+                            updateBreakDisplay(); // immediate update to show paused value
+                            
+                            timerDisplay.classList.remove('text-muted');
+                            timerDisplay.classList.add('text-primary');
+                            updateTimerDisplay(); // immediate update to resume it
+                            
+                            showToast('Work session resumed.');
+                        } else {
+                            showToast(res.message || 'Error ending break', true);
+                        }
+                    });
+                }
+            });
+        }
     }
 
 

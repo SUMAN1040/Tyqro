@@ -50,7 +50,17 @@ def end_work(request):
             # Lock the active session to prevent double clock-outs
             attendance = Attendance.objects.select_for_update().get(user=request.user, is_active=True)
             attendance.end_time = timezone.now()
-            attendance.duration = attendance.end_time - attendance.start_time
+            
+            # If currently on break, end break automatically
+            if attendance.current_break_start:
+                break_elapsed = attendance.end_time - attendance.current_break_start
+                attendance.total_break_duration += break_elapsed
+                attendance.current_break_start = None
+                
+            net_duration = (attendance.end_time - attendance.start_time) - attendance.total_break_duration
+            if net_duration < datetime.timedelta(0):
+                net_duration = datetime.timedelta(0)
+            attendance.duration = net_duration
             attendance.is_active = False
             if 'early_leave_reason' in data:
                 attendance.early_leave_reason = data['early_leave_reason']
@@ -63,7 +73,52 @@ def end_work(request):
             perf.total_points = perf.attendance_points
             perf.save()
             
-            return JsonResponse({'status': 'success', 'end_time': attendance.end_time.isoformat(), 'duration': str(attendance.duration)})
+            return JsonResponse({
+                'status': 'success',
+                'end_time': attendance.end_time.isoformat(),
+                'duration': str(attendance.duration),
+                'total_break_duration': attendance.total_break_duration.total_seconds()
+            })
+        except Attendance.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'No active work session'})
+    return JsonResponse({'status': 'error'}, status=400)
+
+@login_required
+@transaction.atomic
+def start_break(request):
+    if request.method == 'POST':
+        try:
+            attendance = Attendance.objects.select_for_update().get(user=request.user, is_active=True)
+            if attendance.current_break_start:
+                return JsonResponse({'status': 'error', 'message': 'Already on break'})
+            attendance.current_break_start = timezone.now()
+            attendance.save()
+            return JsonResponse({
+                'status': 'success',
+                'current_break_start': attendance.current_break_start.isoformat(),
+                'total_break_duration': attendance.total_break_duration.total_seconds()
+            })
+        except Attendance.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'No active work session'})
+    return JsonResponse({'status': 'error'}, status=400)
+
+@login_required
+@transaction.atomic
+def end_break(request):
+    if request.method == 'POST':
+        try:
+            attendance = Attendance.objects.select_for_update().get(user=request.user, is_active=True)
+            if not attendance.current_break_start:
+                return JsonResponse({'status': 'error', 'message': 'Not currently on break'})
+            now = timezone.now()
+            elapsed = now - attendance.current_break_start
+            attendance.total_break_duration += elapsed
+            attendance.current_break_start = None
+            attendance.save()
+            return JsonResponse({
+                'status': 'success',
+                'total_break_duration': attendance.total_break_duration.total_seconds()
+            })
         except Attendance.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'No active work session'})
     return JsonResponse({'status': 'error'}, status=400)
@@ -76,7 +131,15 @@ def attendance_status(request):
         return JsonResponse({
             'is_active': attendance.is_active,
             'start_time': attendance.start_time.isoformat() if attendance.start_time else None,
-            'end_time': attendance.end_time.isoformat() if attendance.end_time else None
+            'end_time': attendance.end_time.isoformat() if attendance.end_time else None,
+            'total_break_duration': attendance.total_break_duration.total_seconds(),
+            'current_break_start': attendance.current_break_start.isoformat() if attendance.current_break_start else None
         })
     except Attendance.DoesNotExist:
-        return JsonResponse({'is_active': False, 'start_time': None, 'end_time': None})
+        return JsonResponse({
+            'is_active': False,
+            'start_time': None,
+            'end_time': None,
+            'total_break_duration': 0,
+            'current_break_start': None
+        })
