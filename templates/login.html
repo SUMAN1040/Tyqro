@@ -4,12 +4,27 @@
 
 {% block auth_content %}
 <h3 class="text-center fw-bold text-white mb-4">Welcome back</h3>
+
+{% if form.non_field_errors %}
+    {% for error in form.non_field_errors %}
+        <div class="alert alert-danger bg-danger text-danger alert-dismissible fade show text-center py-2 px-3 small mb-3 border-0 bg-opacity-25" role="alert">
+            {{ error }}
+            <button type="button" class="btn-close btn-close-white py-2" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
 <form method="post">
     {% csrf_token %}
     {% for field in form %}
     <div class="mb-3">
         <label class="form-label text-secondary small fw-medium">{{ field.label }}</label>
         {{ field }}
+        {% if field.errors %}
+            <div class="text-danger small mt-1">
+                {{ field.errors.0 }}
+            </div>
+        {% endif %}
     </div>
     {% endfor %}
     <div class="text-end mb-3">

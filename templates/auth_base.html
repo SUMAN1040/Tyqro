@@ -22,6 +22,15 @@
                             </a>
                         </div>
                         
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert {% if message.tags == 'error' %}alert-danger bg-danger text-danger{% else %}alert-{{ message.tags|default:"info" }} bg-info text-info{% endif %} alert-dismissible fade show text-center py-2 px-3 small mb-3 border-0 bg-opacity-25" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close {% if message.tags == 'error' or message.tags == 'danger' %}btn-close-white{% endif %} py-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
                         {% block auth_content %}{% endblock %}
                     </div>
                 </div>
