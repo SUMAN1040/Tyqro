@@ -81,6 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const startWorkBtn = document.getElementById('startWorkBtn');
     const endWorkBtn = document.getElementById('endWorkBtn');
     const timerDisplay = document.getElementById('timerDisplay');
+    const totalWorkTimeLabel = document.getElementById('totalWorkTimeLabel');
     
     // Break Elements
     const breakDisplayContainer = document.getElementById('breakDisplayContainer');
@@ -215,6 +216,8 @@ document.addEventListener('DOMContentLoaded', () => {
         totalBreakSeconds = totalBreakDurationSeconds;
         currentBreakStart = currentBreakStartISO ? new Date(currentBreakStartISO) : null;
         
+        if (totalWorkTimeLabel) totalWorkTimeLabel.classList.remove('d-none');
+        
         if (timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(updateTimerDisplay, 1000);
         updateTimerDisplay();
@@ -299,6 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (res.status === 'success') {
                 stopTimer();
                 timerDisplay.innerText = "Session Ended";
+                if (totalWorkTimeLabel) totalWorkTimeLabel.classList.add('d-none');
                 showToast('Work session ended successfully!');
                 
                 if (typeof loadHeatmap === 'function') loadHeatmap(); // refresh charts
@@ -317,6 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (res.end_time) {
                 // Already worked today
                 timerDisplay.innerText = "Done for today";
+                if (totalWorkTimeLabel) totalWorkTimeLabel.classList.add('d-none');
                 startWorkBtn.disabled = true;
                 endWorkBtn.disabled = true;
                 disableTodoInput();
@@ -329,6 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (res.end_time) {
                     // Already worked today
                     timerDisplay.innerText = "Done for today";
+                    if (totalWorkTimeLabel) totalWorkTimeLabel.classList.add('d-none');
                     startWorkBtn.disabled = true;
                     endWorkBtn.disabled = true;
                     disableTodoInput();
@@ -582,6 +588,7 @@ document.addEventListener('DOMContentLoaded', () => {
                      if (res.status === 'success') {
                          stopTimer();
                          timerDisplay.innerText = "Session Ended";
+                         if (totalWorkTimeLabel) totalWorkTimeLabel.classList.add('d-none');
                          showToast("Your work session has been automatically ended at 6:00 PM.");
 
                          // Clear all todos on frontend when session is ended
