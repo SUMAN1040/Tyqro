@@ -69,8 +69,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (avatarInput) {
         avatarInput.addEventListener('change', function() {
             if (this.files && this.files[0]) {
-                if (this.files[0].size > 300 * 1024) { // 300KB
-                    showToast('Profile image must be less than 300KB.', true);
+                if (this.files[0].size > 100 * 1024) { // 100KB
+                    showToast('Profile image must be less than 100KB.', true);
                     this.value = ''; // clear input
                 }
             }

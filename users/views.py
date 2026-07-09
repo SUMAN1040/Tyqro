@@ -190,8 +190,8 @@ def update_profile(request):
         # Handle avatar upload
         avatar = request.FILES.get('avatar')
         if avatar:
-            if avatar.size > 300 * 1024:
-                messages.error(request, 'Profile image must be less than 300KB.')
+            if avatar.size > 100 * 1024:
+                messages.error(request, 'Profile image must be less than 100KB.')
                 return redirect('dashboard')
             user.profile.avatar = avatar
             user.profile.save()
