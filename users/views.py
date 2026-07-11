@@ -255,22 +255,22 @@ def forgot_password(request):
             
         try:
             user = User.objects.get(email__iexact=email)
-            otp = str(random.randint(100000, 999999))
-            request.session['reset_otp'] = otp
-            request.session['reset_email'] = email
-            
-            mail_subject = 'Tyqro Password Reset Code'
-            message = f"Hi {user.first_name},\n\nA request was made to reset the password for your Tyqro account. Use the authorization code below to complete the reset.\n\nYour 6-digit password reset code is:\n\n{otp}\n\nIf you did not initiate this request, please ignore this email.\n\nThanks!"
-            email_msg = EmailMessage(
-                        mail_subject, message, to=[email]
-            )
-            email_msg.send()
         except User.DoesNotExist:
-            # Set dummy values in session to prevent email enumeration
-            request.session['reset_otp'] = 'DUMMY_OTP_VALUE'
-            request.session['reset_email'] = email
+            messages.error(request, 'This email address is not registered.')
+            return redirect('forgot_password')
             
-        messages.success(request, 'If an account with that email exists, we have sent a verification code.')
+        otp = str(random.randint(100000, 999999))
+        request.session['reset_otp'] = otp
+        request.session['reset_email'] = email
+        
+        mail_subject = 'Tyqro Password Reset Code'
+        message = f"Hi {user.first_name},\n\nA request was made to reset the password for your Tyqro account. Use the authorization code below to complete the reset.\n\nYour 6-digit password reset code is:\n\n{otp}\n\nIf you did not initiate this request, please ignore this email.\n\nThanks!"
+        email_msg = EmailMessage(
+                    mail_subject, message, to=[email]
+        )
+        email_msg.send()
+        
+        messages.success(request, 'We have sent a verification code to your email.')
         return redirect('forgot_password_verify')
         
     return render(request, 'forgot_password.html')
