@@ -207,36 +207,57 @@
                         <input type="number" step="0.25" min="1" max="24" class="form-control bg-body" name="daily_hours_target" value="{{ user.profile.daily_hours_target|floatformat:2 }}" required>
                         <div class="form-text mt-1 text-muted" style="font-size: 0.8rem;">Used to calculate daily attendance completion thresholds.</div>
                       </div>
+                      
+                      <!-- Standard Schedule vs Custom Times -->
+                      <div class="mb-3 border p-3 rounded bg-body-tertiary">
+                        <div class="form-check mb-3">
+                          <input class="form-check-input" type="checkbox" name="use_standard_schedule" id="useStandardSchedule" {% if user.profile.use_standard_schedule %}checked{% endif %}>
+                          <label class="form-check-label small fw-bold text-body" for="useStandardSchedule">
+                            Use Standard 9 AM - 6 PM Schedule (9 hours)
+                          </label>
+                        </div>
+                        <div class="row g-2" id="customTimeFields">
+                          <div class="col-md-6">
+                            <label class="form-label text-muted small mb-1">Work Start Time</label>
+                            <input type="time" class="form-control bg-body" name="work_start_time" id="workStartTimeInput" value="{{ user.profile.work_start_time|time:'H:i' }}" {% if user.profile.use_standard_schedule %}disabled{% endif %}>
+                          </div>
+                          <div class="col-md-6">
+                            <label class="form-label text-muted small mb-1">Work End Time</label>
+                            <input type="time" class="form-control bg-body" name="work_end_time" id="workEndTimeInput" value="{{ user.profile.work_end_time|time:'H:i' }}" {% if user.profile.use_standard_schedule %}disabled{% endif %}>
+                          </div>
+                        </div>
+                      </div>
+
                       <div class="mb-4">
                         <label class="form-label text-muted small mb-2 d-block">Active Workdays</label>
                         <div class="d-flex flex-wrap gap-2">
                           <div class="form-check form-check-inline bg-light p-2 rounded border px-3 mb-2">
                             <input class="form-check-input ms-0 me-2" type="checkbox" name="work_days" id="day-mon" value="Mon" {% if "Mon" in user.profile.work_days %}checked{% endif %}>
-                            <label class="form-check-label small fw-medium text-dark" for="day-mon">Mon</label>
+                            <label class="form-check-label small fw-medium" for="day-mon">Mon</label>
                           </div>
                           <div class="form-check form-check-inline bg-light p-2 rounded border px-3 mb-2">
                             <input class="form-check-input ms-0 me-2" type="checkbox" name="work_days" id="day-tue" value="Tue" {% if "Tue" in user.profile.work_days %}checked{% endif %}>
-                            <label class="form-check-label small fw-medium text-dark" for="day-tue">Tue</label>
+                            <label class="form-check-label small fw-medium" for="day-tue">Tue</label>
                           </div>
                           <div class="form-check form-check-inline bg-light p-2 rounded border px-3 mb-2">
                             <input class="form-check-input ms-0 me-2" type="checkbox" name="work_days" id="day-wed" value="Wed" {% if "Wed" in user.profile.work_days %}checked{% endif %}>
-                            <label class="form-check-label small fw-medium text-dark" for="day-wed">Wed</label>
+                            <label class="form-check-label small fw-medium" for="day-wed">Wed</label>
                           </div>
                           <div class="form-check form-check-inline bg-light p-2 rounded border px-3 mb-2">
                             <input class="form-check-input ms-0 me-2" type="checkbox" name="work_days" id="day-thu" value="Thu" {% if "Thu" in user.profile.work_days %}checked{% endif %}>
-                            <label class="form-check-label small fw-medium text-dark" for="day-thu">Thu</label>
+                            <label class="form-check-label small fw-medium" for="day-thu">Thu</label>
                           </div>
                           <div class="form-check form-check-inline bg-light p-2 rounded border px-3 mb-2">
                             <input class="form-check-input ms-0 me-2" type="checkbox" name="work_days" id="day-fri" value="Fri" {% if "Fri" in user.profile.work_days %}checked{% endif %}>
-                            <label class="form-check-label small fw-medium text-dark" for="day-fri">Fri</label>
+                            <label class="form-check-label small fw-medium" for="day-fri">Fri</label>
                           </div>
                           <div class="form-check form-check-inline bg-light p-2 rounded border px-3 mb-2">
                             <input class="form-check-input ms-0 me-2" type="checkbox" name="work_days" id="day-sat" value="Sat" {% if "Sat" in user.profile.work_days %}checked{% endif %}>
-                            <label class="form-check-label small fw-medium text-dark" for="day-sat">Sat</label>
+                            <label class="form-check-label small fw-medium" for="day-sat">Sat</label>
                           </div>
                           <div class="form-check form-check-inline bg-light p-2 rounded border px-3 mb-2">
                             <input class="form-check-input ms-0 me-2" type="checkbox" name="work_days" id="day-sun" value="Sun" {% if "Sun" in user.profile.work_days %}checked{% endif %}>
-                            <label class="form-check-label small fw-medium text-dark" for="day-sun">Sun</label>
+                            <label class="form-check-label small fw-medium" for="day-sun">Sun</label>
                           </div>
                         </div>
                       </div>
@@ -280,14 +301,36 @@
     <script>
         // Global JS config
         const csrfToken = '{{ csrf_token }}';
+        {% if user.is_authenticated %}
+        const userSchedule = {
+            useStandard: {% if user.profile.use_standard_schedule %}true{% else %}false{% endif %},
+            startTime: '{{ user.profile.work_start_time|time:"H:i" }}',
+            endTime: '{{ user.profile.work_end_time|time:"H:i" }}'
+        };
+        {% endif %}
 
-        // Settings Modal Danger Zone Checkbox listener
+        // Settings Modal Danger Zone & Time Preference listeners
         document.addEventListener('DOMContentLoaded', function() {
             const confirmCheck = document.getElementById('confirmDeleteCheck');
             const deleteBtn = document.getElementById('deleteAccountBtn');
             if (confirmCheck && deleteBtn) {
                 confirmCheck.addEventListener('change', function() {
                     deleteBtn.disabled = !this.checked;
+                });
+            }
+
+            // Toggle Custom Time Inputs based on Use Standard Schedule checkbox
+            const useStandardCheck = document.getElementById('useStandardSchedule');
+            const startTimeInput = document.getElementById('workStartTimeInput');
+            const endTimeInput = document.getElementById('workEndTimeInput');
+            if (useStandardCheck && startTimeInput && endTimeInput) {
+                useStandardCheck.addEventListener('change', function() {
+                    startTimeInput.disabled = this.checked;
+                    endTimeInput.disabled = this.checked;
+                    if (this.checked) {
+                        startTimeInput.value = '09:00';
+                        endTimeInput.value = '18:00';
+                    }
                 });
             }
         });

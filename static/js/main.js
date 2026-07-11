@@ -365,15 +365,37 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        const formatTimeStr = (h, m) => {
+            let minutes = m;
+            let hours = h;
+            if (minutes >= 60) {
+                hours += Math.floor(minutes / 60);
+                minutes = minutes % 60;
+            }
+            const suffix = hours >= 12 ? 'PM' : 'AM';
+            const dispHours = hours % 12 || 12;
+            const dispMins = String(minutes).padStart(2, '0');
+            return `${dispHours}:${dispMins} ${suffix}`;
+        };
+
         function proceedWithStartWork() {
             const now = new Date();
             const hrs = now.getHours();
             const mins = now.getMinutes();
-            // Start after 9:05 AM (hrs > 9 or hrs == 9 and mins > 5)
-            if (hrs > 9 || (hrs === 9 && mins > 5)) {
+            
+            // Get user's custom start time, defaulting to 9:00 AM
+            const startTimeStr = (typeof userSchedule !== 'undefined' && userSchedule.startTime) ? userSchedule.startTime : '09:00';
+            const [startHrs, startMins] = startTimeStr.split(':').map(Number);
+            
+            const currentMinutes = hrs * 60 + mins;
+            const targetStartMinutes = startHrs * 60 + startMins;
+            const graceTimeFormatted = formatTimeStr(startHrs, startMins + 5);
+            
+            // Start after target time + 5 minutes grace period
+            if (currentMinutes > targetStartMinutes + 5) {
                 currentAction = 'start';
                 reasonModalLabel.innerText = "Late Start Reason";
-                reasonModalDesc.innerText = "You are starting work after 9:05 AM. Please provide a reason. Minimum 15 words required.";
+                reasonModalDesc.innerText = `You are starting work after ${graceTimeFormatted}. Please provide a reason. Minimum 15 words required.`;
                 reasonTextarea.value = '';
                 reasonTextarea.dispatchEvent(new Event('input')); // trigger word count validation
                 reasonModal.show();
@@ -382,21 +404,33 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        endWorkBtn.addEventListener('click', () => {
-            const now = new Date();
-            const hrs = now.getHours();
-            // End before 6:00 PM (18:00)
-            if (hrs < 18) {
-                currentAction = 'end';
-                reasonModalLabel.innerText = "Early Leave Reason";
-                reasonModalDesc.innerText = "You are ending work before 6:00 PM. Please provide a reason. Minimum 15 words required.";
-                reasonTextarea.value = '';
-                reasonTextarea.dispatchEvent(new Event('input')); // trigger word count validation
-                reasonModal.show();
-            } else {
-                submitEndWork();
-            }
-        });
+        if (endWorkBtn) {
+            endWorkBtn.addEventListener('click', () => {
+                const now = new Date();
+                const hrs = now.getHours();
+                const mins = now.getMinutes();
+                
+                // Get user's custom end time, defaulting to 6:00 PM (18:00)
+                const endTimeStr = (typeof userSchedule !== 'undefined' && userSchedule.endTime) ? userSchedule.endTime : '18:00';
+                const [endHrs, endMins] = endTimeStr.split(':').map(Number);
+                
+                const currentMinutes = hrs * 60 + mins;
+                const targetEndMinutes = endHrs * 60 + endMins;
+                const targetEndFormatted = formatTimeStr(endHrs, endMins);
+                
+                // End before target end time
+                if (currentMinutes < targetEndMinutes) {
+                    currentAction = 'end';
+                    reasonModalLabel.innerText = "Early Leave Reason";
+                    reasonModalDesc.innerText = `You are ending work before ${targetEndFormatted}. Please provide a reason. Minimum 15 words required.`;
+                    reasonTextarea.value = '';
+                    reasonTextarea.dispatchEvent(new Event('input')); // trigger word count validation
+                    reasonModal.show();
+                } else {
+                    submitEndWork();
+                }
+            });
+        }
 
         if (breakBtn) {
             breakBtn.addEventListener('click', () => {

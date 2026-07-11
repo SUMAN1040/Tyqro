@@ -8,6 +8,9 @@ class UserProfile(models.Model):
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     daily_hours_target = models.DecimalField(max_digits=4, decimal_places=2, default=9.00)
     work_days = models.CharField(max_length=100, default='Mon,Tue,Wed,Thu,Fri')
+    use_standard_schedule = models.BooleanField(default=True)
+    work_start_time = models.TimeField(default="09:00:00")
+    work_end_time = models.TimeField(default="18:00:00")
 
     def __str__(self):
         return f"{self.user.username}'s Profile"

@@ -394,6 +394,15 @@ def update_preferences(request):
             messages.error(request, 'Daily hours target must be a number between 0 and 24.')
             return redirect('dashboard')
             
+        use_standard_schedule = request.POST.get('use_standard_schedule') == 'on'
+        profile.use_standard_schedule = use_standard_schedule
+        if use_standard_schedule:
+            profile.work_start_time = "09:00:00"
+            profile.work_end_time = "18:00:00"
+        else:
+            profile.work_start_time = request.POST.get('work_start_time', "09:00:00")
+            profile.work_end_time = request.POST.get('work_end_time', "18:00:00")
+            
         work_days_list = request.POST.getlist('work_days')
         profile.work_days = ",".join(work_days_list)
         profile.save()
