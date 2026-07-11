@@ -4,8 +4,10 @@ from django.contrib.auth.models import User
 class EmailBackend(ModelBackend):
     def authenticate(self, request, username=None, password=None, **kwargs):
         email = kwargs.get('email', username)
+        if email:
+            email = email.strip().lower()
         try:
-            user = User.objects.get(email=email)
+            user = User.objects.get(email__iexact=email)
             if user.check_password(password) and self.user_can_authenticate(user):
                 return user
         except User.DoesNotExist:

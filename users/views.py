@@ -197,9 +197,9 @@ def update_profile(request):
             user.profile.save()
             
         # Handle email change with OTP
-        new_email = request.POST.get('email', '').strip()
+        new_email = request.POST.get('email', '').strip().lower()
         if new_email and new_email != user.email:
-            if User.objects.filter(email=new_email).exclude(id=user.id).exists():
+            if User.objects.filter(email__iexact=new_email).exclude(id=user.id).exists():
                 messages.error(request, 'This email is already in use.')
                 return redirect('dashboard')
                 
@@ -229,8 +229,8 @@ def verify_email_update(request):
         entered_otp = request.POST.get('otp', '').strip()
         if entered_otp == stored_otp:
             user = request.user
-            user.email = pending_email
-            user.username = pending_email 
+            user.email = pending_email.strip().lower()
+            user.username = user.email[:150]
             user.save()
             
             del request.session['update_email_otp']
@@ -248,28 +248,29 @@ def forgot_password(request):
         return redirect('dashboard')
         
     if request.method == 'POST':
-        email = request.POST.get('email', '').strip()
+        email = request.POST.get('email', '').strip().lower()
         if not email:
             messages.error(request, 'Please enter your email address.')
             return redirect('forgot_password')
             
         try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            # We still show a generic message to prevent email enumeration
-            messages.success(request, 'If an account with that email exists, we have sent a verification code.')
-            return redirect('login')
+            user = User.objects.get(email__iexact=email)
+            otp = str(random.randint(100000, 999999))
+            request.session['reset_otp'] = otp
+            request.session['reset_email'] = email
             
-        otp = str(random.randint(100000, 999999))
-        request.session['reset_otp'] = otp
-        request.session['reset_email'] = email
-        
-        mail_subject = 'Tyqro Password Reset Code'
-        message = f"Hi {user.first_name},\n\nA request was made to reset the password for your Tyqro account. Use the authorization code below to complete the reset.\n\nYour 6-digit password reset code is:\n\n{otp}\n\nIf you did not initiate this request, please ignore this email.\n\nThanks!"
-        email_msg = EmailMessage(
-                    mail_subject, message, to=[email]
-        )
-        email_msg.send()
+            mail_subject = 'Tyqro Password Reset Code'
+            message = f"Hi {user.first_name},\n\nA request was made to reset the password for your Tyqro account. Use the authorization code below to complete the reset.\n\nYour 6-digit password reset code is:\n\n{otp}\n\nIf you did not initiate this request, please ignore this email.\n\nThanks!"
+            email_msg = EmailMessage(
+                        mail_subject, message, to=[email]
+            )
+            email_msg.send()
+        except User.DoesNotExist:
+            # Set dummy values in session to prevent email enumeration
+            request.session['reset_otp'] = 'DUMMY_OTP_VALUE'
+            request.session['reset_email'] = email
+            
+        messages.success(request, 'If an account with that email exists, we have sent a verification code.')
         return redirect('forgot_password_verify')
         
     return render(request, 'forgot_password.html')
@@ -318,7 +319,7 @@ def reset_password(request):
             messages.error(request, 'Password must be at least 8 characters long.')
         else:
             try:
-                user = User.objects.get(email=email)
+                user = User.objects.get(email__iexact=email)
                 
                 # Check Django validation rules
                 from django.contrib.auth.password_validation import validate_password

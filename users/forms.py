@@ -15,7 +15,9 @@ class UserSignupForm(forms.ModelForm):
 
     def clean_email(self):
         email = self.cleaned_data.get('email')
-        existing_user = User.objects.filter(email=email).first()
+        if email:
+            email = email.strip().lower()
+        existing_user = User.objects.filter(email__iexact=email).first()
         if existing_user:
             if existing_user.is_active:
                 raise forms.ValidationError("This email address is already in use.")
@@ -41,9 +43,9 @@ class UserSignupForm(forms.ModelForm):
 
     def save(self, commit=True):
         user = super().save(commit=False)
+        user.email = self.cleaned_data["email"].strip().lower()
+        user.username = user.email[:150]
         user.set_password(self.cleaned_data["password"])
-        # Use email as underlying username
-        user.username = self.cleaned_data["email"][:150]
         user.is_active = False  # Deactivate account till email is verified
         if commit:
             user.save()
