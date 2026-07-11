@@ -346,3 +346,15 @@ def reset_password(request):
                 return redirect('forgot_password')
                 
     return render(request, 'reset_password.html')
+
+def service_worker(request):
+    import os
+    from django.conf import settings
+    from django.http import HttpResponse
+    
+    sw_path = os.path.join(settings.BASE_DIR, 'static', 'js', 'sw.js')
+    try:
+        with open(sw_path, 'r') as f:
+            return HttpResponse(f.read(), content_type='application/javascript')
+    except FileNotFoundError:
+        return HttpResponse('Service worker not found', status=404)
