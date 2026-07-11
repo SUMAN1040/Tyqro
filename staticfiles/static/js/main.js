@@ -110,6 +110,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const wordCountDisplay = document.getElementById('wordCountDisplay');
     const reasonModalLabel = document.getElementById('reasonModalLabel');
     const reasonModalDesc = document.getElementById('reasonModalDesc');
+
+    const startWorkConfirmModalEl = document.getElementById('startWorkConfirmModal');
+    let startWorkConfirmModal = null;
+    if (startWorkConfirmModalEl) startWorkConfirmModal = new bootstrap.Modal(startWorkConfirmModalEl);
+    const confirmStartWorkBtn = document.getElementById('confirmStartWorkBtn');
     
     let currentAction = null; // 'start' or 'end'
 
@@ -344,9 +349,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         startWorkBtn.addEventListener('click', () => {
-            const confirmed = confirm("Have you added all your tasks for today? You won't be able to add more after starting work.");
-            if (!confirmed) return;
+            if (startWorkConfirmModal) {
+                startWorkConfirmModal.show();
+            } else {
+                proceedWithStartWork();
+            }
+        });
 
+        if (confirmStartWorkBtn) {
+            confirmStartWorkBtn.addEventListener('click', () => {
+                if (startWorkConfirmModal) {
+                    startWorkConfirmModal.hide();
+                }
+                proceedWithStartWork();
+            });
+        }
+
+        function proceedWithStartWork() {
             const now = new Date();
             const hrs = now.getHours();
             const mins = now.getMinutes();
@@ -361,7 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 submitStartWork();
             }
-        });
+        }
 
         endWorkBtn.addEventListener('click', () => {
             const now = new Date();

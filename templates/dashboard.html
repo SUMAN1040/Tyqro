@@ -181,6 +181,30 @@
   </div>
 </div>
 
+<!-- Start Work Confirm Modal (Centered) -->
+<div class="modal fade" id="startWorkConfirmModal" tabindex="-1" aria-labelledby="startWorkConfirmModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h1 class="modal-title fs-5 fw-bold" id="startWorkConfirmModalLabel">Confirm Work Session</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center py-4">
+        <div class="mb-3 text-warning">
+          <i class="bi bi-exclamation-triangle-fill" style="font-size: 3rem;"></i>
+        </div>
+        <p class="fs-6 fw-medium mb-1">Have you added all your tasks for today?</p>
+        <p class="text-muted small mb-0">You won't be able to add more after starting work.</p>
+      </div>
+      <div class="modal-footer border-0 pt-0 d-flex justify-content-center gap-2">
+        <button type="button" class="btn btn-light px-4 rounded-pill fw-medium" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary px-4 rounded-pill fw-medium" id="confirmStartWorkBtn">Yes, Start Work</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 {% endblock %}
 
 {% block scripts %}
