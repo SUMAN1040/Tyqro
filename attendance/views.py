@@ -10,11 +10,16 @@ from django.db import transaction
 
 def auto_close_previous_sessions(user):
     today = timezone.now().date()
+    try:
+        target_hours = float(user.profile.daily_hours_target)
+    except Exception:
+        target_hours = 9.0
+        
     active_prev_sessions = Attendance.objects.select_for_update().filter(user=user, is_active=True).exclude(date=today)
     for session in active_prev_sessions:
         if not session.start_time:
-            session.start_time = timezone.now() - datetime.timedelta(hours=9)
-        session.end_time = session.start_time + datetime.timedelta(hours=9)
+            session.start_time = timezone.now() - datetime.timedelta(hours=target_hours)
+        session.end_time = session.start_time + datetime.timedelta(hours=target_hours)
         if session.current_break_start:
             session.current_break_start = None
             

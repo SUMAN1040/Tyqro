@@ -358,3 +358,55 @@ def service_worker(request):
             return HttpResponse(f.read(), content_type='application/javascript')
     except FileNotFoundError:
         return HttpResponse('Service worker not found', status=404)
+
+@login_required
+def change_password(request):
+    from django.contrib.auth.forms import PasswordChangeForm
+    from django.contrib.auth import update_session_auth_hash
+    from django.contrib import messages
+    
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)
+            messages.success(request, 'Your password was successfully updated!')
+        else:
+            for error in form.non_field_errors():
+                messages.error(request, error)
+            for field in form:
+                for error in field.errors:
+                    messages.error(request, f"{field.label}: {error}")
+    return redirect('dashboard')
+
+@login_required
+def update_preferences(request):
+    from django.contrib import messages
+    
+    if request.method == 'POST':
+        profile = request.user.profile
+        try:
+            daily_hours_target = float(request.POST.get('daily_hours_target', 9.0))
+            if daily_hours_target <= 0 or daily_hours_target > 24:
+                raise ValueError()
+            profile.daily_hours_target = daily_hours_target
+        except ValueError:
+            messages.error(request, 'Daily hours target must be a number between 0 and 24.')
+            return redirect('dashboard')
+            
+        work_days_list = request.POST.getlist('work_days')
+        profile.work_days = ",".join(work_days_list)
+        profile.save()
+        messages.success(request, 'Preferences updated successfully!')
+    return redirect('dashboard')
+
+@login_required
+def delete_account(request):
+    from django.contrib import messages
+    
+    if request.method == 'POST':
+        user = request.user
+        user.delete()
+        messages.success(request, 'Your account has been deleted successfully.')
+        return redirect('landing')
+    return redirect('dashboard')
