@@ -121,7 +121,7 @@ def login_view(request):
 def logout_view(request):
     if request.method == 'POST':
         logout(request)
-        return redirect('login')
+        return redirect('landing')
     return redirect('dashboard')
 
 def signup_view(request):
