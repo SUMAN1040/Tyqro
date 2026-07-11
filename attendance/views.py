@@ -8,9 +8,34 @@ import json
 
 from django.db import transaction
 
+def auto_close_previous_sessions(user):
+    today = timezone.now().date()
+    active_prev_sessions = Attendance.objects.select_for_update().filter(user=user, is_active=True).exclude(date=today)
+    for session in active_prev_sessions:
+        if not session.start_time:
+            session.start_time = timezone.now() - datetime.timedelta(hours=9)
+        session.end_time = session.start_time + datetime.timedelta(hours=9)
+        if session.current_break_start:
+            session.current_break_start = None
+            
+        net_duration = (session.end_time - session.start_time) - session.total_break_duration
+        if net_duration < datetime.timedelta(0):
+            net_duration = datetime.timedelta(0)
+        session.duration = net_duration
+        session.is_active = False
+        session.save()
+        
+        from analytics.models import DailyPerformance
+        perf, _ = DailyPerformance.objects.select_for_update().get_or_create(user=user, date=session.date)
+        perf.hours_worked = round(session.duration.total_seconds() / 3600.0, 2)
+        perf.attendance_points = 100
+        perf.total_points = perf.attendance_points
+        perf.save()
+
 @login_required
 @transaction.atomic
 def start_work(request):
+    auto_close_previous_sessions(request.user)
     if request.method == 'POST':
         today = timezone.now().date()
         try:
@@ -40,6 +65,7 @@ def start_work(request):
 @login_required
 @transaction.atomic
 def end_work(request):
+    auto_close_previous_sessions(request.user)
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -86,6 +112,7 @@ def end_work(request):
 @login_required
 @transaction.atomic
 def start_break(request):
+    auto_close_previous_sessions(request.user)
     if request.method == 'POST':
         try:
             attendance = Attendance.objects.select_for_update().get(user=request.user, is_active=True)
@@ -105,6 +132,7 @@ def start_break(request):
 @login_required
 @transaction.atomic
 def end_break(request):
+    auto_close_previous_sessions(request.user)
     if request.method == 'POST':
         try:
             attendance = Attendance.objects.select_for_update().get(user=request.user, is_active=True)
@@ -124,7 +152,9 @@ def end_break(request):
     return JsonResponse({'status': 'error'}, status=400)
 
 @login_required
+@transaction.atomic
 def attendance_status(request):
+    auto_close_previous_sessions(request.user)
     today = timezone.now().date()
     try:
         attendance = Attendance.objects.get(user=request.user, date=today)

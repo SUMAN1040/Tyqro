@@ -598,26 +598,31 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 6 PM Auto End
-        if (hrs === 18 && mins === 0 && workStartTime) {
-             const lastAutoEnded = localStorage.getItem('auto_end_date');
-             const todayStr = now.toDateString();
-             if (lastAutoEnded !== todayStr) {
-                 fetchAPI('/attendance/end/', 'POST').then(res => {
-                     if (res.status === 'success') {
-                         stopTimer();
-                         timerDisplay.innerText = "Session Ended";
-                         if (totalWorkTimeLabel) totalWorkTimeLabel.classList.add('d-none');
-                         showToast("Your work session has been automatically ended at 6:00 PM.");
+        // 6 PM or Previous Day Auto End
+        if (workStartTime) {
+            const isDifferentDay = workStartTime.toDateString() !== now.toDateString();
+            const isPast6PM = workStartTime.getHours() < 18 && hrs >= 18;
 
-                         // Clear all todos on frontend when session is ended
-                         todos = [];
-                         renderTodos();
+            if (isDifferentDay || isPast6PM) {
+                 const lastAutoEnded = localStorage.getItem('auto_end_date');
+                 const todayStr = now.toDateString();
+                 if (lastAutoEnded !== todayStr) {
+                     fetchAPI('/attendance/end/', 'POST').then(res => {
+                         if (res.status === 'success' || res.message === 'No active work session') {
+                             stopTimer();
+                             timerDisplay.innerText = "Session Ended";
+                             if (totalWorkTimeLabel) totalWorkTimeLabel.classList.add('d-none');
+                             showToast("Your work session has been automatically ended at 6:00 PM.");
 
-                         localStorage.setItem('auto_end_date', todayStr);
-                     }
-                 });
-             }
+                             // Clear all todos on frontend when session is ended
+                             todos = [];
+                             renderTodos();
+
+                             localStorage.setItem('auto_end_date', todayStr);
+                         }
+                     });
+                 }
+            }
         }
     };
 
