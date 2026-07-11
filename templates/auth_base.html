@@ -1,107 +1,100 @@
 {% extends 'base.html' %}
 
 {% block layout %}
-<div class="auth-wrapper position-relative overflow-hidden min-vh-100 d-flex align-items-center justify-content-center">
-    <!-- Animated Gradient Background -->
-    <div class="animated-bg">
-        <div class="blob blob-1"></div>
-        <div class="blob blob-2"></div>
-        <div class="blob blob-3"></div>
+<div class="container-fluid p-0 min-vh-100 d-flex flex-column flex-lg-row">
+    <!-- Left panel (Marketing, hidden on mobile) -->
+    <div class="col-lg-6 d-none d-lg-flex flex-column justify-content-between p-5 text-white position-relative" style="background: linear-gradient(135deg, #090e17 0%, #152033 100%); border-right: 1px solid rgba(255, 255, 255, 0.05);">
+        <!-- Logo -->
+        <a href="/" class="d-flex align-items-center gap-2 text-decoration-none text-white">
+            <img src="/static/img/favicon.png" alt="Tyqro Logo" style="height: 36px; width: auto; object-fit: contain;">
+            <span class="fs-4 fw-bold tracking-tight">Tyqro</span>
+        </a>
+        
+        <!-- Center message -->
+        <div class="my-auto" style="max-width: 480px;">
+            <h1 class="display-5 fw-bold mb-4 lh-sm">
+                Master your time.<br/>
+                <span style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Elevate your work.</span>
+            </h1>
+            <p class="lead text-secondary fs-5 mb-4">
+                Join thousands of freelancers and remote workers who track precision hours, manage daily tasks, and analyze productivity trends effortlessly.
+            </p>
+            <div class="d-flex flex-column gap-3 mt-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="bi bi-clock-history fs-5"></i>
+                    </div>
+                    <span class="text-light fw-medium">Precision time tracking</span>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-success bg-opacity-10 text-success rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="bi bi-check2-square fs-5"></i>
+                    </div>
+                    <span class="text-light fw-medium">Lightning-fast task management</span>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-info bg-opacity-10 text-info rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="bi bi-graph-up-arrow fs-5"></i>
+                    </div>
+                    <span class="text-light fw-medium">Performance analytics heatmaps</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer / Testimonial -->
+        <div class="border-top border-white border-opacity-10 pt-4 mt-auto">
+            <figure class="mb-0">
+                <blockquote class="blockquote text-light fs-6">
+                    <p>"Tyqro has completely changed how our team tracks time. The daily todo list integrated with precise time logs keeps us focused and productive."</p>
+                </blockquote>
+                <figcaption class="blockquote-footer text-secondary mb-0 mt-1">
+                    Alex Rivera, <cite title="Source Title">Product Designer</cite>
+                </figcaption>
+            </figure>
+        </div>
     </div>
     
-    <!-- Content Container -->
-    <div class="container position-relative z-1 py-5">
-        <div class="row justify-content-center">
-            <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5">
-                <div class="card border-secondary border-opacity-25 shadow-lg p-2 p-sm-4 rounded-4 auth-glass">
-                    <div class="card-body">
-                        <!-- Branding back button -->
-                        <div class="text-center mb-4">
-                            <a href="/" class="text-decoration-none text-white fs-3 fw-bold d-inline-flex align-items-center gap-2 mb-2">
-                                <img src="/static/img/favicon.png" alt="Tyqro Logo" style="height: 32px; width: auto; object-fit: contain;"> Tyqro.
-                            </a>
+    <!-- Right panel (Login/Signup form, centered) -->
+    <div class="col-12 col-lg-6 d-flex align-items-center justify-content-center p-4 p-sm-5 flex-grow-1" style="background-color: #0b0f19; min-height: 100vh;">
+        <div class="w-100" style="max-width: 440px;">
+            <!-- Logo for mobile only -->
+            <div class="d-lg-none text-center mb-4">
+                <a href="/" class="d-inline-flex align-items-center gap-2 text-decoration-none text-white fw-bold fs-3">
+                    <img src="/static/img/favicon.png" alt="Tyqro Logo" style="height: 36px; width: auto; object-fit: contain;"> Tyqro.
+                </a>
+            </div>
+            
+            <!-- Clean Card Design -->
+            <div class="card bg-dark bg-opacity-50 border border-secondary border-opacity-25 shadow-lg p-4 p-sm-5 rounded-4">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert {% if message.tags == 'error' %}alert-danger bg-danger text-danger{% else %}alert-{{ message.tags|default:"info" }} bg-info text-info{% endif %} alert-dismissible fade show text-center py-2 px-3 small mb-3 border-0 bg-opacity-25" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close {% if message.tags == 'error' or message.tags == 'danger' %}btn-close-white{% endif %} py-2" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
-                        
-                        {% if messages %}
-                            {% for message in messages %}
-                                <div class="alert {% if message.tags == 'error' %}alert-danger bg-danger text-danger{% else %}alert-{{ message.tags|default:"info" }} bg-info text-info{% endif %} alert-dismissible fade show text-center py-2 px-3 small mb-3 border-0 bg-opacity-25" role="alert">
-                                    {{ message }}
-                                    <button type="button" class="btn-close {% if message.tags == 'error' or message.tags == 'danger' %}btn-close-white{% endif %} py-2" data-bs-dismiss="alert" aria-label="Close"></button>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
+                    {% endfor %}
+                {% endif %}
 
-                        {% block auth_content %}{% endblock %}
-                    </div>
-                </div>
+                {% block auth_content %}{% endblock %}
             </div>
         </div>
     </div>
 </div>
 
 <style>
-/* Animated Background Styles */
-.auth-wrapper {
-    background: #0b0f19; /* Deep dark base */
+/* Clean Bootstrap-first overrides */
+.card .form-control {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: #fff !important;
+    border-radius: 8px;
+    padding: 0.65rem 1rem;
+    transition: all 0.2s ease-in-out;
 }
-.animated-bg {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    z-index: 0;
-    overflow: hidden;
-}
-.blob {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(100px);
-    opacity: 0.6;
-    animation: float 20s infinite alternate ease-in-out;
-}
-.blob-1 {
-    top: -20%; left: -10%;
-    width: 60vw; height: 60vw;
-    background: #4facfe;
-    animation-delay: 0s;
-}
-.blob-2 {
-    bottom: -30%; right: -10%;
-    width: 50vw; height: 50vw;
-    background: #00f2fe;
-    animation-delay: -5s;
-    animation-direction: alternate-reverse;
-}
-.blob-3 {
-    top: 20%; left: 20%;
-    width: 40vw; height: 40vw;
-    background: #667eea;
-    animation-delay: -10s;
-}
-
-@keyframes float {
-    0% { transform: translate(0, 0) scale(1); }
-    33% { transform: translate(5%, 10%) scale(1.05); }
-    66% { transform: translate(-5%, 5%) scale(0.95); }
-    100% { transform: translate(0, -10%) scale(1.1); }
-}
-
-/* Glassmorphism Card */
-.auth-glass {
-    background: rgba(30, 33, 40, 0.6) !important;
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
-}
-
-/* Enhancing forms inside auth-glass */
-.auth-glass .form-control {
-    background: rgba(0, 0, 0, 0.2) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white !important;
-}
-.auth-glass .form-control:focus {
-    background: rgba(0, 0, 0, 0.3) !important;
-    border-color: #4facfe;
-    box-shadow: 0 0 0 0.25rem rgba(79, 172, 254, 0.25);
+.card .form-control:focus {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border-color: #4facfe !important;
+    box-shadow: 0 0 0 0.25rem rgba(79, 172, 254, 0.25) !important;
 }
 </style>
 {% endblock %}
