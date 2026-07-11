@@ -16,7 +16,7 @@
                 Master your time.<br/>
                 <span style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Elevate your work.</span>
             </h1>
-            <p class="lead text-secondary fs-5 mb-4">
+            <p class="lead text-white-50 fs-5 mb-4">
                 Join thousands of freelancers and remote workers who track precision hours, manage daily tasks, and analyze productivity trends effortlessly.
             </p>
             <div class="d-flex flex-column gap-3 mt-4">
@@ -47,7 +47,7 @@
                 <blockquote class="blockquote text-light fs-6">
                     <p>"Tyqro has completely changed how our team tracks time. The daily todo list integrated with precise time logs keeps us focused and productive."</p>
                 </blockquote>
-                <figcaption class="blockquote-footer text-secondary mb-0 mt-1">
+                <figcaption class="blockquote-footer text-white-50 mb-0 mt-1">
                     Alex Rivera, <cite title="Source Title">Product Designer</cite>
                 </figcaption>
             </figure>
@@ -83,18 +83,21 @@
 
 <style>
 /* Clean Bootstrap-first overrides */
+.card label.form-label {
+    color: rgba(255, 255, 255, 0.75) !important;
+}
 .card .form-control {
-    background-color: rgba(255, 255, 255, 0.05) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
     color: #fff !important;
     border-radius: 8px;
     padding: 0.65rem 1rem;
     transition: all 0.2s ease-in-out;
 }
 .card .form-control:focus {
-    background-color: rgba(255, 255, 255, 0.08) !important;
-    border-color: #4facfe !important;
-    box-shadow: 0 0 0 0.25rem rgba(79, 172, 254, 0.25) !important;
+    background-color: rgba(255, 255, 255, 0.12) !important;
+    border-color: #00f2fe !important;
+    box-shadow: 0 0 0 0.25rem rgba(0, 242, 254, 0.2) !important;
 }
 </style>
 {% endblock %}
