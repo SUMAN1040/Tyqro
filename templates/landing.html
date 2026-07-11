@@ -451,6 +451,18 @@
             updateTimer();
             setInterval(updateTimer, 1000);
         }
+
+        // Close mobile navbar collapse when clicking outside
+        document.addEventListener('click', function(event) {
+            const navbar = document.querySelector('.navbar');
+            const collapse = document.getElementById('publicNav');
+            if (navbar && collapse && collapse.classList.contains('show')) {
+                if (!navbar.contains(event.target)) {
+                    const bsCollapse = bootstrap.Collapse.getInstance(collapse) || new bootstrap.Collapse(collapse, { toggle: false });
+                    bsCollapse.hide();
+                }
+            }
+        });
     });
 </script>
 {% endblock %}
