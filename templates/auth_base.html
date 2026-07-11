@@ -43,12 +43,12 @@
         
         <!-- Footer / Testimonial -->
         <div class="border-top border-white border-opacity-10 pt-4 mt-auto">
-            <figure class="mb-0">
+            <figure class="mb-0" id="testimonial-container" style="transition: opacity 0.5s ease-in-out; opacity: 1;">
                 <blockquote class="blockquote text-light fs-6">
-                    <p>"Tyqro has completely changed how our team tracks time. The daily todo list integrated with precise time logs keeps us focused and productive."</p>
+                    <p id="testimonial-text">"Tyqro has completely changed how our team tracks time. The daily todo list integrated with precise time logs keeps us focused and productive."</p>
                 </blockquote>
                 <figcaption class="blockquote-footer text-white-50 mb-0 mt-1">
-                    Alex Rivera, <cite title="Source Title">Product Designer</cite>
+                    <span id="testimonial-author">Alex Rivera</span>, <cite id="testimonial-role" title="Source Title">Product Designer</cite>
                 </figcaption>
             </figure>
         </div>
@@ -102,4 +102,47 @@
 </style>
 {% endblock %}
 
-{% block footer %}{% endblock %} <!-- Hide the public footer on auth pages -->
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const testimonials = [
+            {
+                quote: `"Tyqro has completely changed how our team tracks time. The daily todo list integrated with precise time logs keeps us focused and productive."`,
+                author: "Alex Rivera",
+                role: "Product Designer"
+            },
+            {
+                quote: `"The cleanest time tracker I've ever used. The performance heatmaps give me a clear picture of my weekly focus and help me stay on track."`,
+                author: "Sarah Jenkins",
+                role: "Independent Developer"
+            },
+            {
+                quote: `"No complex workflows or enterprise bloat. Just a lightning-fast todo list and a precise, reliable timer. Absolute perfection."`,
+                author: "Marcus Chen",
+                role: "Freelance Copywriter"
+            }
+        ];
+        
+        let index = 0;
+        const container = document.getElementById('testimonial-container');
+        const textElem = document.getElementById('testimonial-text');
+        const authorElem = document.getElementById('testimonial-author');
+        const roleElem = document.getElementById('testimonial-role');
+        
+        if (container && textElem && authorElem && roleElem) {
+            setInterval(function() {
+                container.style.opacity = '0';
+                setTimeout(function() {
+                    index = (index + 1) % testimonials.length;
+                    textElem.textContent = testimonials[index].quote;
+                    authorElem.textContent = testimonials[index].author;
+                    roleElem.textContent = testimonials[index].role;
+                    container.style.opacity = '1';
+                }, 500);
+            }, 5000);
+        }
+    });
+</script>
+{% endblock %}
+
+{% block footer %}{% endblock %}
