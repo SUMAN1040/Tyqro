@@ -410,6 +410,23 @@
         transition: width 0.2s ease, background-color 0.2s ease;
     }
     
+    /* Mobile Responsive Navbar Improvements */
+    @media (max-width: 991.98px) {
+        .navbar {
+            border-radius: 24px !important; /* Premium rounded floating card layout */
+            transition: border-radius 0.25s ease-in-out;
+        }
+        .navbar-collapse {
+            margin-top: 12px;
+            border-top: 1px solid rgba(0, 0, 0, 0.05); /* Clean divider line */
+            padding-top: 12px;
+        }
+        .navbar-toggler:focus {
+            box-shadow: none !important;
+            outline: none !important;
+        }
+    }
+    
     html { scroll-behavior: smooth; }
 </style>
 {% endblock %}
