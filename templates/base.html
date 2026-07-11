@@ -42,7 +42,9 @@
             {% if user.is_authenticated %}
             <nav class="navbar navbar-expand py-3 px-4 border-bottom border-secondary-subtle">
                 <div class="container-fluid px-0 d-flex align-items-center justify-content-between">
-                    <a class="navbar-brand fs-4 fw-bold text-body" href="{% url 'dashboard' %}">Tyqro.</a>
+                    <a class="navbar-brand fs-4 fw-bold text-body d-flex align-items-center gap-2" href="{% url 'dashboard' %}">
+                        <img src="/static/img/favicon.png" alt="Tyqro Logo" style="height: 28px; width: auto; object-fit: contain;"> Tyqro.
+                    </a>
                     
                     <div class="ms-auto d-flex align-items-center">
                         <div class="dropdown me-3">
