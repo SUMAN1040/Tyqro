@@ -99,6 +99,22 @@
     border-color: #00f2fe !important;
     box-shadow: 0 0 0 0.25rem rgba(0, 242, 254, 0.2) !important;
 }
+.card .input-group .toggle-password-btn {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-left: none !important;
+    color: rgba(255, 255, 255, 0.6) !important;
+    border-radius: 0 8px 8px 0;
+    transition: all 0.2s ease-in-out;
+}
+.card .input-group .toggle-password-btn:hover {
+    color: #fff !important;
+    background-color: rgba(255, 255, 255, 0.12) !important;
+}
+.card .input-group:has(.toggle-password-btn) .form-control {
+    border-right: none !important;
+    border-radius: 8px 0 0 8px !important;
+}
 </style>
 {% endblock %}
 

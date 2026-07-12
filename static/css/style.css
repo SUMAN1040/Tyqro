@@ -258,3 +258,22 @@ input:focus {
     border-radius: 50%;
     opacity: 0.3;
 }
+
+/* Password visibility toggle styles */
+.input-group .toggle-password-btn {
+    border-left: none;
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-color);
+    opacity: 0.6;
+    transition: all 0.2s ease-in-out;
+}
+.input-group .toggle-password-btn:hover {
+    opacity: 1;
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--primary-color);
+}
+.input-group:has(.toggle-password-btn) .form-control {
+    border-right: none !important;
+}

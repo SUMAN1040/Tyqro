@@ -181,15 +181,30 @@
                       {% csrf_token %}
                       <div class="mb-3">
                         <label class="form-label text-muted small mb-1">Current Password</label>
-                        <input type="password" class="form-control bg-body" name="old_password" placeholder="Enter current password" required>
+                        <div class="input-group">
+                          <input type="password" class="form-control bg-body" name="old_password" placeholder="Enter current password" required>
+                          <button class="btn btn-outline-secondary toggle-password-btn" type="button">
+                            <i class="bi bi-eye"></i>
+                          </button>
+                        </div>
                       </div>
                       <div class="mb-3">
                         <label class="form-label text-muted small mb-1">New Password</label>
-                        <input type="password" class="form-control bg-body" name="new_password1" placeholder="At least 8 characters" required>
+                        <div class="input-group">
+                          <input type="password" class="form-control bg-body" name="new_password1" placeholder="At least 8 characters" required>
+                          <button class="btn btn-outline-secondary toggle-password-btn" type="button">
+                            <i class="bi bi-eye"></i>
+                          </button>
+                        </div>
                       </div>
                       <div class="mb-4">
                         <label class="form-label text-muted small mb-1">Confirm New Password</label>
-                        <input type="password" class="form-control bg-body" name="new_password2" placeholder="Confirm new password" required>
+                        <div class="input-group">
+                          <input type="password" class="form-control bg-body" name="new_password2" placeholder="Confirm new password" required>
+                          <button class="btn btn-outline-secondary toggle-password-btn" type="button">
+                            <i class="bi bi-eye"></i>
+                          </button>
+                        </div>
                       </div>
                       <div class="text-end">
                         <button type="submit" class="btn btn-primary px-4 fw-medium">Change Password</button>
@@ -346,6 +361,30 @@
                     endTimeInput.disabled = !this.checked;
                 });
             }
+
+            // Global Password Visibility Toggle
+            document.addEventListener('click', function(e) {
+                const btn = e.target.closest('.toggle-password-btn');
+                if (btn) {
+                    e.preventDefault();
+                    const container = btn.closest('.input-group');
+                    if (container) {
+                        const input = container.querySelector('input');
+                        const icon = btn.querySelector('i');
+                        if (input && icon) {
+                            if (input.type === 'password') {
+                                input.type = 'text';
+                                icon.classList.remove('bi-eye');
+                                icon.classList.add('bi-eye-slash');
+                            } else {
+                                input.type = 'password';
+                                icon.classList.remove('bi-eye-slash');
+                                icon.classList.add('bi-eye');
+                            }
+                        }
+                    }
+                }
+            });
         });
     </script>
     <!-- Custom JS -->

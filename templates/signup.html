@@ -11,7 +11,16 @@
     {% for field in form %}
     <div class="mb-3">
         <label class="form-label text-secondary small fw-medium">{{ field.label }}</label>
+        {% if 'password' in field.name %}
+        <div class="input-group">
+            {{ field }}
+            <button class="btn btn-outline-secondary toggle-password-btn" type="button">
+                <i class="bi bi-eye"></i>
+            </button>
+        </div>
+        {% else %}
         {{ field }}
+        {% endif %}
         {% if field.errors %}
             <div class="text-danger small mt-1">
                 {{ field.errors.0 }}
