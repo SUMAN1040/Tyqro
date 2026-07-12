@@ -32,7 +32,8 @@ export default function Signup({ onNavigate }) {
             });
             onNavigate('verify_otp', { user_id: response.data.user_id, email: email.trim().lower() });
         } catch (err) {
-            const errMsg = err.response?.data?.error || 'Registration failed. Please check your inputs.';
+            console.error('Signup API Error:', err);
+            const errMsg = err.response?.data?.error || err.response?.data?.detail || 'Registration failed. Please check your inputs.';
             setError(errMsg);
         } finally {
             setLoading(false);
