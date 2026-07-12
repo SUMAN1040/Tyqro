@@ -9,10 +9,15 @@ from django.contrib.auth.models import User
 
 import random
 import json
+import threading
 from django.utils import timezone
 from todos.models import Todo
 from attendance.models import Attendance
 from analytics.models import DailyPerformance
+
+def send_email_async(email_message):
+    thread = threading.Thread(target=email_message.send)
+    thread.start()
 
 def landing_page(request):
     if request.user.is_authenticated:
@@ -138,11 +143,10 @@ def signup_view(request):
             
             mail_subject = 'Your Tyqro Verification Code'
             message = f"Hi {user.first_name},\n\nThank you for signing up for Tyqro. Your 6-digit email verification code is:\n\n{otp}\n\nPlease enter this code on the verification page to activate your account.\nIf you did not sign up for an account, please ignore this email.\n\nThanks!"
-            to_email = form.cleaned_data.get('email')
             email = EmailMessage(
-                        mail_subject, message, to=[to_email]
+                        mail_subject, message, to=[user.email]
             )
-            email.send()
+            send_email_async(email)
             return redirect('verify_otp')
     else:
         form = UserSignupForm()
@@ -210,7 +214,7 @@ def update_profile(request):
             mail_subject = 'Verify Your New Email Address'
             message = f"Hi {user.first_name},\n\nWe received a request to update the email address associated with your Tyqro profile. Please confirm this change by entering the verification code below.\n\nYour 6-digit verification code is:\n\n{otp}\n\nIf you did not initiate this request, please ignore this email.\n\nThanks!"
             email = EmailMessage(mail_subject, message, to=[new_email])
-            email.send()
+            send_email_async(email)
             return redirect('verify_email_update')
             
         messages.success(request, 'Profile updated successfully!')
@@ -268,7 +272,7 @@ def forgot_password(request):
         email_msg = EmailMessage(
                     mail_subject, message, to=[email]
         )
-        email_msg.send()
+        send_email_async(email_msg)
         
         messages.success(request, 'We have sent a verification code to your email.')
         return redirect('forgot_password_verify')
