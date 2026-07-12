@@ -52,60 +52,11 @@ def dashboard(request):
             'current_break_start': None
         }
         
-    # 3. Heatmap / Analytics
-    now = timezone.now()
-    current_year = now.year
-    start_year = request.user.date_joined.year if request.user.date_joined else current_year
-    available_years = list(range(current_year, start_year - 1, -1))
-    if current_year not in available_years:
-        available_years.insert(0, current_year)
-        
-    import datetime
-    start_date = datetime.date(current_year, 1, 1)
-    end_date = datetime.date(current_year, 12, 31)
-    performances = DailyPerformance.objects.filter(user=request.user, date__range=(start_date, end_date))
-    from django.db.models import Count, Q
-    year_todos = Todo.objects.filter(user=request.user, date__range=(start_date, end_date)) \
-        .values('date') \
-        .annotate(
-            total=Count('id'),
-            completed=Count('id', filter=Q(is_completed=True))
-        )
-
-    data_map = {}
-    for perf in performances:
-        date_str = perf.date.isoformat()
-        data_map[date_str] = {
-            'date': date_str,
-            'hours': float(perf.hours_worked),
-            'tasks_completed': 0,
-            'total_tasks': 0
-        }
-        
-    for item in year_todos:
-        date_str = item['date'].isoformat()
-        if date_str not in data_map:
-            data_map[date_str] = {
-                'date': date_str,
-                'hours': 0.0,
-                'tasks_completed': 0,
-                'total_tasks': 0
-            }
-        data_map[date_str]['total_tasks'] = item['total']
-        data_map[date_str]['tasks_completed'] = item['completed']
-
-    analytics = {
-        'status': 'success',
-        'data': list(data_map.values()),
-        'years': available_years,
-        'selected_year': current_year
-    }
-
-    # Combined payload
+    # Combined payload (heatmap analytics are lazy-loaded via AJAX to optimize initial load speed)
     payload = {
         'todos': todos,
         'attendance': attendance_status,
-        'analytics': analytics
+        'analytics': None
     }
     
     return render(request, 'dashboard.html', {'dashboard_data_json': json.dumps(payload)})
