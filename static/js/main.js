@@ -379,6 +379,13 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         function proceedWithStartWork() {
+            const useFixedSchedule = (typeof userSchedule !== 'undefined' && userSchedule.useFixedSchedule);
+            if (!useFixedSchedule) {
+                // Flexible schedule: can start at any time without any late reason check
+                submitStartWork();
+                return;
+            }
+
             const now = new Date();
             const hrs = now.getHours();
             const mins = now.getMinutes();
@@ -406,6 +413,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (endWorkBtn) {
             endWorkBtn.addEventListener('click', () => {
+                const useFixedSchedule = (typeof userSchedule !== 'undefined' && userSchedule.useFixedSchedule);
+                
+                if (!useFixedSchedule) {
+                    // Flexible target-based schedule
+                    const now = new Date();
+                    let diffTotal = now - workStartTime;
+                    if (diffTotal < 0) diffTotal = 0;
+                    
+                    let totalBreakMs = totalBreakSeconds * 1000;
+                    if (currentBreakStart) {
+                        totalBreakMs += (now - currentBreakStart);
+                    }
+                    if (totalBreakMs < 0) totalBreakMs = 0;
+                    
+                    let diffNet = diffTotal - totalBreakMs;
+                    if (diffNet < 0) diffNet = 0;
+                    
+                    const dailyHoursTarget = (typeof userSchedule !== 'undefined' && userSchedule.dailyHoursTarget) ? parseFloat(userSchedule.dailyHoursTarget) : 9.0;
+                    const targetMs = dailyHoursTarget * 3600000;
+                    
+                    if (diffNet < targetMs) {
+                        currentAction = 'end';
+                        reasonModalLabel.innerText = "Early Leave Reason";
+                        
+                        const netHrs = Math.floor(diffNet / 3600000);
+                        const netMins = Math.floor((diffNet % 3600000) / 60000);
+                        const workedStr = `${netHrs}h ${netMins}m`;
+                        
+                        reasonModalDesc.innerText = `You are ending work before completing your daily target of ${dailyHoursTarget} hours (You have worked ${workedStr}). Please provide a reason. Minimum 15 words required.`;
+                        reasonTextarea.value = '';
+                        reasonTextarea.dispatchEvent(new Event('input')); // trigger word count validation
+                        reasonModal.show();
+                    } else {
+                        submitEndWork();
+                    }
+                    return;
+                }
+                
+                // Fixed time-based schedule
                 const now = new Date();
                 const hrs = now.getHours();
                 const mins = now.getMinutes();

@@ -203,27 +203,27 @@
                     <form action="{% url 'update_preferences' %}" method="post">
                       {% csrf_token %}
                       <div class="mb-3">
-                        <label class="form-label text-muted small mb-1">Daily Work Hours Target</label>
-                        <input type="number" step="0.25" min="1" max="24" class="form-control bg-body" name="daily_hours_target" value="{{ user.profile.daily_hours_target|floatformat:2 }}" required>
-                        <div class="form-text mt-1 text-muted" style="font-size: 0.8rem;">Used to calculate daily attendance completion thresholds.</div>
+                        <label class="form-label text-muted small mb-1">Daily Work Hours Target (Flexible Mode)</label>
+                        <input type="number" step="0.25" min="1" max="24" class="form-control bg-body" name="daily_hours_target" id="dailyHoursTargetInput" value="{{ user.profile.daily_hours_target|floatformat:2 }}" {% if user.profile.use_fixed_schedule %}disabled{% endif %} required>
+                        <div class="form-text mt-1 text-muted" style="font-size: 0.8rem;">Number of hours you target to work daily when not on a fixed schedule.</div>
                       </div>
                       
-                      <!-- Standard Schedule vs Custom Times -->
+                      <!-- Fixed Schedule vs Flexible Target -->
                       <div class="mb-3 border p-3 rounded bg-body-tertiary">
                         <div class="form-check mb-3">
-                          <input class="form-check-input" type="checkbox" name="use_standard_schedule" id="useStandardSchedule" {% if user.profile.use_standard_schedule %}checked{% endif %}>
-                          <label class="form-check-label small fw-bold text-body" for="useStandardSchedule">
-                            Use Standard 9 AM - 6 PM Schedule (9 hours)
+                          <input class="form-check-input" type="checkbox" name="use_fixed_schedule" id="useFixedSchedule" {% if user.profile.use_fixed_schedule %}checked{% endif %}>
+                          <label class="form-check-label small fw-bold text-body" for="useFixedSchedule">
+                            Enable Fixed Time Schedule (Custom Start/End Times)
                           </label>
                         </div>
                         <div class="row g-2" id="customTimeFields">
                           <div class="col-md-6">
                             <label class="form-label text-muted small mb-1">Work Start Time</label>
-                            <input type="time" class="form-control bg-body" name="work_start_time" id="workStartTimeInput" value="{{ user.profile.work_start_time|time:'H:i' }}" {% if user.profile.use_standard_schedule %}disabled{% endif %}>
+                            <input type="time" class="form-control bg-body" name="work_start_time" id="workStartTimeInput" value="{{ user.profile.work_start_time|time:'H:i' }}" {% if not user.profile.use_fixed_schedule %}disabled{% endif %}>
                           </div>
                           <div class="col-md-6">
                             <label class="form-label text-muted small mb-1">Work End Time</label>
-                            <input type="time" class="form-control bg-body" name="work_end_time" id="workEndTimeInput" value="{{ user.profile.work_end_time|time:'H:i' }}" {% if user.profile.use_standard_schedule %}disabled{% endif %}>
+                            <input type="time" class="form-control bg-body" name="work_end_time" id="workEndTimeInput" value="{{ user.profile.work_end_time|time:'H:i' }}" {% if not user.profile.use_fixed_schedule %}disabled{% endif %}>
                           </div>
                         </div>
                       </div>
@@ -299,7 +299,8 @@
     {% if user.is_authenticated %}
     <script id="user-schedule-data" type="application/json">
         {
-            "useStandard": {{ user.profile.use_standard_schedule|yesno:"true,false" }},
+            "useFixedSchedule": {{ user.profile.use_fixed_schedule|yesno:"true,false" }},
+            "dailyHoursTarget": {{ user.profile.daily_hours_target }},
             "startTime": "{{ user.profile.work_start_time|time:'H:i' }}",
             "endTime": "{{ user.profile.work_end_time|time:'H:i' }}"
         }
@@ -333,18 +334,16 @@
                 });
             }
 
-            // Toggle Custom Time Inputs based on Use Standard Schedule checkbox
-            const useStandardCheck = document.getElementById('useStandardSchedule');
+            // Toggle Custom Time Inputs based on Use Fixed Schedule checkbox
+            const useFixedCheck = document.getElementById('useFixedSchedule');
+            const dailyHoursTargetInput = document.getElementById('dailyHoursTargetInput');
             const startTimeInput = document.getElementById('workStartTimeInput');
             const endTimeInput = document.getElementById('workEndTimeInput');
-            if (useStandardCheck && startTimeInput && endTimeInput) {
-                useStandardCheck.addEventListener('change', function() {
-                    startTimeInput.disabled = this.checked;
-                    endTimeInput.disabled = this.checked;
-                    if (this.checked) {
-                        startTimeInput.value = '09:00';
-                        endTimeInput.value = '18:00';
-                    }
+            if (useFixedCheck && dailyHoursTargetInput && startTimeInput && endTimeInput) {
+                useFixedCheck.addEventListener('change', function() {
+                    dailyHoursTargetInput.disabled = this.checked;
+                    startTimeInput.disabled = !this.checked;
+                    endTimeInput.disabled = !this.checked;
                 });
             }
         });

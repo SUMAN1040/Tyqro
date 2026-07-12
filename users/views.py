@@ -382,26 +382,39 @@ def change_password(request):
 @login_required
 def update_preferences(request):
     from django.contrib import messages
+    import datetime
     
     if request.method == 'POST':
         profile = request.user.profile
-        try:
-            daily_hours_target = float(request.POST.get('daily_hours_target', 9.0))
-            if daily_hours_target <= 0 or daily_hours_target > 24:
-                raise ValueError()
-            profile.daily_hours_target = daily_hours_target
-        except ValueError:
-            messages.error(request, 'Daily hours target must be a number between 0 and 24.')
-            return redirect('dashboard')
+        use_fixed_schedule = request.POST.get('use_fixed_schedule') == 'on'
+        profile.use_fixed_schedule = use_fixed_schedule
+        
+        if use_fixed_schedule:
+            start_time_str = request.POST.get('work_start_time', "09:00")
+            end_time_str = request.POST.get('work_end_time', "18:00")
+            profile.work_start_time = start_time_str
+            profile.work_end_time = end_time_str
             
-        use_standard_schedule = request.POST.get('use_standard_schedule') == 'on'
-        profile.use_standard_schedule = use_standard_schedule
-        if use_standard_schedule:
-            profile.work_start_time = "09:00:00"
-            profile.work_end_time = "18:00:00"
+            # Calculate target hours automatically based on the custom fixed time range
+            try:
+                t1 = datetime.datetime.strptime(start_time_str, "%H:%M")
+                t2 = datetime.datetime.strptime(end_time_str, "%H:%M")
+                if t2 < t1:
+                    delta = (t2 + datetime.timedelta(days=1)) - t1
+                else:
+                    delta = t2 - t1
+                profile.daily_hours_target = round(delta.total_seconds() / 3600.0, 2)
+            except Exception:
+                profile.daily_hours_target = 9.00
         else:
-            profile.work_start_time = request.POST.get('work_start_time', "09:00:00")
-            profile.work_end_time = request.POST.get('work_end_time', "18:00:00")
+            try:
+                daily_hours_target = float(request.POST.get('daily_hours_target', 9.0))
+                if daily_hours_target <= 0 or daily_hours_target > 24:
+                    raise ValueError()
+                profile.daily_hours_target = daily_hours_target
+            except ValueError:
+                messages.error(request, 'Daily hours target must be a number between 0 and 24.')
+                return redirect('dashboard')
             
         work_days_list = request.POST.getlist('work_days')
         profile.work_days = ",".join(work_days_list)
