@@ -39,10 +39,6 @@ export default function Landing({ onNavigate }) {
                                     <li className="nav-item"><a className="nav-link text-secondary fw-medium px-2" href="#how-it-works">How It Works</a></li>
                                     <li className="nav-item"><a className="nav-link text-secondary fw-medium px-2" href="#benefits">Benefits</a></li>
                                 </ul>
-                                <div className="d-flex gap-2">
-                                    <button onClick={() => onNavigate('login')} className="btn btn-outline-dark btn-sm rounded-pill px-3 py-1 fw-medium">Log in</button>
-                                    <button onClick={() => onNavigate('signup')} className="btn btn-primary btn-sm rounded-pill px-3 py-1 fw-medium">Sign up</button>
-                                </div>
                             </div>
                         </div>
                     </div>
