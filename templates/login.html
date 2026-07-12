@@ -14,7 +14,7 @@
     {% endfor %}
 {% endif %}
 
-<form method="post">
+<form method="post" hx-boost="true">
     {% csrf_token %}
     {% for field in form %}
     <div class="mb-3">

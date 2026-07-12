@@ -19,7 +19,7 @@
                     {% endfor %}
                 {% endif %}
 
-                <form method="post">
+                <form method="post" hx-boost="true">
                     {% csrf_token %}
                     <div class="mb-4">
                         <input type="text" name="otp" class="form-control form-control-lg text-center fw-bold ls-widest" placeholder="• • • • • •" maxlength="6" autofocus required>
