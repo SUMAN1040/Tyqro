@@ -362,8 +362,8 @@
                 });
             }
 
-            // Global Password Visibility Toggle
-            document.addEventListener('click', function(e) {
+            // Global Password Visibility Toggle (Press and Hold to Reveal)
+            document.addEventListener('pointerdown', function(e) {
                 const btn = e.target.closest('.toggle-password-btn');
                 if (btn) {
                     e.preventDefault();
@@ -372,19 +372,32 @@
                         const input = container.querySelector('input');
                         const icon = btn.querySelector('i');
                         if (input && icon) {
-                            if (input.type === 'password') {
-                                input.type = 'text';
-                                icon.classList.remove('bi-eye');
-                                icon.classList.add('bi-eye-slash');
-                            } else {
-                                input.type = 'password';
-                                icon.classList.remove('bi-eye-slash');
-                                icon.classList.add('bi-eye');
-                            }
+                            input.type = 'text';
+                            icon.classList.remove('bi-eye');
+                            icon.classList.add('bi-eye-slash');
                         }
                     }
                 }
             });
+
+            function hideAllPasswords() {
+                document.querySelectorAll('.toggle-password-btn').forEach(btn => {
+                    const container = btn.closest('.input-group');
+                    if (container) {
+                        const input = container.querySelector('input');
+                        const icon = btn.querySelector('i');
+                        if (input && icon && input.type === 'text') {
+                            input.type = 'password';
+                            icon.classList.remove('bi-eye-slash');
+                            icon.classList.add('bi-eye');
+                        }
+                    }
+                });
+            }
+
+            document.addEventListener('pointerup', hideAllPasswords);
+            document.addEventListener('pointercancel', hideAllPasswords);
+            document.addEventListener('mouseleave', hideAllPasswords);
         });
     </script>
     <!-- Custom JS -->
