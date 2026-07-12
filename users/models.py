@@ -11,6 +11,9 @@ class UserProfile(models.Model):
     use_fixed_schedule = models.BooleanField(default=False)
     work_start_time = models.TimeField(default="09:00:00")
     work_end_time = models.TimeField(default="18:00:00")
+    otp_code = models.CharField(max_length=6, null=True, blank=True)
+    otp_purpose = models.CharField(max_length=50, null=True, blank=True)
+    otp_pending_email = models.EmailField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.user.username}'s Profile"

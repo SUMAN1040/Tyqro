@@ -6,10 +6,10 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('users.urls')),
-    path('attendance/', include('attendance.urls')),
-    path('todos/', include('todos.urls')),
-    path('analytics/', include('analytics.urls')),
-    path('notifications/', include('notifications.urls')),
+    path('api/attendance/', include('attendance.urls')),
+    path('api/todos/', include('todos.urls')),
+    path('api/analytics/', include('analytics.urls')),
+    path('api/notifications/', include('notifications.urls')),
 ]
 
 if settings.DEBUG:

@@ -1,20 +1,24 @@
 from django.urls import path
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 from . import views
 
 urlpatterns = [
-    path('sw.js', views.service_worker, name='sw.js'),
-    path('', views.landing_page, name='landing'),
-    path('dashboard/', views.dashboard, name='dashboard'),
-    path('login/', views.login_view, name='login'),
-    path('logout/', views.logout_view, name='logout'),
-    path('signup/', views.signup_view, name='signup'),
-    path('verify-otp/', views.verify_otp, name='verify_otp'),
-    path('profile/update/', views.update_profile, name='update_profile'),
-    path('profile/verify-email/', views.verify_email_update, name='verify_email_update'),
-    path('profile/change-password/', views.change_password, name='change_password'),
-    path('profile/preferences/', views.update_preferences, name='update_preferences'),
-    path('profile/delete/', views.delete_account, name='delete_account'),
-    path('forgot-password/', views.forgot_password, name='forgot_password'),
-    path('forgot-password/verify/', views.forgot_password_verify, name='forgot_password_verify'),
-    path('forgot-password/reset/', views.reset_password, name='reset_password'),
+    # Stateless Simple JWT Auth
+    path('api/auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
+    # Custom API Endpoints
+    path('api/auth/signup/', views.signup_view, name='api_signup'),
+    path('api/auth/verify-otp/', views.verify_otp, name='api_verify_otp'),
+    path('api/auth/user/', views.current_user, name='api_current_user'),
+    path('api/auth/profile/update/', views.update_profile, name='api_update_profile'),
+    path('api/auth/profile/verify-email/', views.verify_email_update, name='api_verify_email_update'),
+    path('api/auth/profile/change-password/', views.change_password, name='api_change_password'),
+    path('api/auth/profile/preferences/', views.update_preferences, name='api_update_preferences'),
+    path('api/auth/profile/delete/', views.delete_account, name='api_delete_account'),
+    path('api/auth/forgot-password/', views.forgot_password, name='api_forgot_password'),
+    path('api/auth/forgot-password/reset/', views.reset_password, name='api_reset_password'),
 ]

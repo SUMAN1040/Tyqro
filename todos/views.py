@@ -1,62 +1,67 @@
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
-from .models import Todo
-import json
+from rest_framework import status
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 from django.utils import timezone
+import datetime
+from .models import Todo
+from .serializers import TodoSerializer
+from attendance.models import Attendance
 
-@login_required
+@api_view(['GET'])
 def todo_list(request):
-    today = timezone.now().date()
-    todos = Todo.objects.filter(user=request.user, date=today).order_by('created_at').values('id', 'title', 'is_completed')
-    return JsonResponse({'todos': list(todos)})
+    date_str = request.GET.get('date')
+    if date_str:
+        try:
+            target_date = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            target_date = timezone.now().date()
+    else:
+        target_date = timezone.now().date()
 
-@login_required
+    todos = Todo.objects.filter(user=request.user, date=target_date).order_by('created_at')
+    serializer = TodoSerializer(todos, many=True)
+    return Response({'todos': serializer.data})
+
+@api_view(['POST'])
 def add_todo(request):
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        title = data.get('title')
-        if title:
-            # Check if work has started
-            from attendance.models import Attendance
-            attendance = Attendance.objects.filter(user=request.user, date=timezone.now().date()).first()
-            if attendance and attendance.start_time:
-                return JsonResponse({'status': 'error', 'message': 'Cannot add tasks after starting work.'})
-                
-            todo = Todo.objects.create(user=request.user, title=title, date=timezone.now().date())
-            return JsonResponse({'status': 'success', 'todo': {'id': todo.id, 'title': todo.title, 'is_completed': todo.is_completed}})
-    return JsonResponse({'status': 'error'}, status=400)
+    title = request.data.get('title')
+    if not title:
+        return Response({'error': 'Title is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-@login_required
+    # Check if work has started
+    today = timezone.now().date()
+    attendance = Attendance.objects.filter(user=request.user, date=today).first()
+    if attendance and attendance.start_time:
+        return Response({'error': 'Cannot add tasks after starting work.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    todo = Todo.objects.create(user=request.user, title=title, date=today)
+    serializer = TodoSerializer(todo)
+    return Response({'status': 'success', 'todo': serializer.data}, status=status.HTTP_201_CREATED)
+
+@api_view(['POST', 'PATCH'])
 def toggle_todo(request, todo_id):
-    if request.method == 'POST':
-        # Can only toggle todos if the work session is active
-        from attendance.models import Attendance
-        if not Attendance.objects.filter(user=request.user, is_active=True).exists():
-            return JsonResponse({'status': 'error', 'message': 'Cannot complete tasks unless work session is active.'}, status=400)
+    # Can only toggle todos if the work session is active
+    if not Attendance.objects.filter(user=request.user, is_active=True).exists():
+        return Response({'error': 'Cannot complete tasks unless work session is active.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            todo = Todo.objects.get(id=todo_id, user=request.user)
-            todo.is_completed = not todo.is_completed
-            todo.save()
-            return JsonResponse({'status': 'success', 'is_completed': todo.is_completed})
-        except Todo.DoesNotExist:
-            return JsonResponse({'status': 'error'}, status=404)
-    return JsonResponse({'status': 'error'}, status=400)
+    try:
+        todo = Todo.objects.get(id=todo_id, user=request.user)
+        todo.is_completed = not todo.is_completed
+        todo.save()
+        return Response({'status': 'success', 'is_completed': todo.is_completed})
+    except Todo.DoesNotExist:
+        return Response({'error': 'Todo not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-@login_required
+@api_view(['DELETE', 'POST'])
 def delete_todo(request, todo_id):
-    if request.method == 'POST':
-        # Cannot delete tasks after ending work for today
-        from attendance.models import Attendance
-        today = timezone.now().date()
-        if Attendance.objects.filter(user=request.user, date=today, is_active=False, end_time__isnull=False).exists():
-            return JsonResponse({'status': 'error', 'message': 'Cannot delete tasks after ending work.'}, status=400)
+    # Cannot delete tasks after ending work for today
+    today = timezone.now().date()
+    if Attendance.objects.filter(user=request.user, date=today, is_active=False, end_time__isnull=False).exists():
+        return Response({'error': 'Cannot delete tasks after ending work.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            todo = Todo.objects.get(id=todo_id, user=request.user)
-            todo.delete()
-            return JsonResponse({'status': 'success'})
-        except Todo.DoesNotExist:
-            return JsonResponse({'status': 'error'}, status=404)
-    return JsonResponse({'status': 'error'}, status=400)
+    try:
+        todo = Todo.objects.get(id=todo_id, user=request.user)
+        todo.delete()
+        return Response({'status': 'success'})
+    except Todo.DoesNotExist:
+        return Response({'error': 'Todo not found.'}, status=status.HTTP_404_NOT_FOUND)

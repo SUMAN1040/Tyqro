@@ -1,13 +1,12 @@
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 from .models import DailyPerformance
 from attendance.models import Attendance
 from todos.models import Todo
 from django.utils import timezone
 import datetime
 
-@login_required
+@api_view(['GET'])
 def analytics_data(request):
     year = request.GET.get('year')
     now = timezone.now()
@@ -62,4 +61,4 @@ def analytics_data(request):
         data_map[date_str]['tasks_completed'] = item['completed']
 
     data = list(data_map.values())
-    return JsonResponse({'status': 'success', 'data': data, 'years': available_years, 'selected_year': target_year})
+    return Response({'status': 'success', 'data': data, 'years': available_years, 'selected_year': target_year})

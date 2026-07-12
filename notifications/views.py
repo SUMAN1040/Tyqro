@@ -1,16 +1,16 @@
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
+from rest_framework import status
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 from .models import NotificationLog
+from .serializers import NotificationSerializer
 
-@login_required
+@api_view(['GET'])
 def unread_notifications(request):
-    notifs = NotificationLog.objects.filter(user=request.user, is_read=False).values('id', 'message', 'created_at')
-    return JsonResponse({'notifications': list(notifs)})
+    notifs = NotificationLog.objects.filter(user=request.user, is_read=False).order_by('-created_at')
+    serializer = NotificationSerializer(notifs, many=True)
+    return Response({'notifications': serializer.data})
 
-@login_required
+@api_view(['POST'])
 def mark_read(request):
-    if request.method == 'POST':
-        NotificationLog.objects.filter(user=request.user, is_read=False).update(is_read=True)
-        return JsonResponse({'status': 'success'})
-    return JsonResponse({'status': 'error'}, status=400)
+    NotificationLog.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    return Response({'status': 'success'})
