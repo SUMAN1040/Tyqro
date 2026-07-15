@@ -337,6 +337,10 @@ export default function Dashboard({ user }) {
     // Heatmap calendar grid calculations
     const renderHeatmapGrid = () => {
         const cells = [];
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const monthLabels = [];
+        let lastMonthSeen = -1;
+
         const startDate = new Date(selectedYear, 0, 1);
         // Shift start date to the beginning of the week (Sunday)
         startDate.setDate(startDate.getDate() - startDate.getDay());
@@ -350,6 +354,23 @@ export default function Dashboard({ user }) {
 
         while (currentDay <= endDate || currentDay.getDay() !== 0) {
             if (currentDay.getDay() === 0) {
+                let recordedMonthForThisCol = false;
+                for (let row = 0; row < 7; row++) {
+                    const cellDate = new Date(currentDay);
+                    cellDate.setDate(cellDate.getDate() + row);
+                    
+                    if (cellDate.getFullYear() === selectedYear && cellDate.getMonth() !== lastMonthSeen) {
+                        if (!recordedMonthForThisCol) {
+                            monthLabels.push({
+                                label: monthNames[cellDate.getMonth()],
+                                colIndex: colIndex
+                            });
+                            lastMonthSeen = cellDate.getMonth();
+                            recordedMonthForThisCol = true;
+                        }
+                    }
+                }
+
                 const columnCells = [];
                 
                 for (let row = 0; row < 7; row++) {
@@ -399,10 +420,11 @@ export default function Dashboard({ user }) {
                 colIndex++;
             }
         }
-        return cells;
+        return { cells, monthLabels };
     };
 
     const activeTodosCount = todos.filter(t => t.is_completed).length;
+    const { cells: heatmapCells, monthLabels } = renderHeatmapGrid();
 
     return (
         <div className="text-start">
@@ -580,13 +602,15 @@ export default function Dashboard({ user }) {
                                         
                                         <div className="flex-grow-1 overflow-auto">
                                             {/* Months labeling (simulated header offsets) */}
-                                            <div className="heatmap-months position-relative text-muted small mb-2 d-flex justify-content-between" style={{ height: '20px', fontSize: '0.75rem', maxWidth: '800px' }}>
-                                                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m) => (
-                                                    <span key={m}>{m}</span>
+                                            <div className="heatmap-months position-relative text-muted small mb-2" style={{ height: '20px', fontSize: '0.75rem' }}>
+                                                {monthLabels.map((ml, idx) => (
+                                                    <span key={idx} style={{ position: 'absolute', left: `${ml.colIndex * 18}px` }}>
+                                                        {ml.label}
+                                                    </span>
                                                 ))}
                                             </div>
                                             <div className="heatmap-container d-flex" style={{ gap: '4px' }}>
-                                                {renderHeatmapGrid()}
+                                                {heatmapCells}
                                             </div>
                                         </div>
                                     </div>
