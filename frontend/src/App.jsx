@@ -60,6 +60,16 @@ export default function App() {
             dashboard: 'Dashboard | Tyqro'
         };
         document.title = titles[page] || 'Tyqro | Simplify Your Day';
+
+        // Set correct theme prefix depending on active page context
+        if (page === 'landing') {
+            document.documentElement.setAttribute('data-bs-theme', 'light');
+        } else if (['login', 'signup', 'verify_otp', 'forgot_password'].includes(page)) {
+            document.documentElement.setAttribute('data-bs-theme', 'dark');
+        } else if (page === 'dashboard') {
+            const storedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-bs-theme', storedTheme);
+        }
     }, [page]);
 
     const handleLoginSuccess = () => {
