@@ -601,8 +601,7 @@ export default function Dashboard({ user }) {
                                         </div>
                                         
                                         <div className="flex-grow-1 overflow-auto">
-                                            {/* Months labeling (simulated header offsets) */}
-                                            <div className="heatmap-months position-relative text-muted small mb-2" style={{ height: '20px', fontSize: '0.75rem' }}>
+                                            <div className="heatmap-months position-relative text-muted small mb-2" style={{ height: '20px', fontSize: '0.75rem', width: `${heatmapCells.length * 18}px` }}>
                                                 {monthLabels.map((ml, idx) => (
                                                     <span key={idx} style={{ position: 'absolute', left: `${ml.colIndex * 18}px` }}>
                                                         {ml.label}
