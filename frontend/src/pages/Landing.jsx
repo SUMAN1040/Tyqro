@@ -308,7 +308,7 @@ export default function Landing({ onNavigate }) {
                     <div className="row gy-5 mb-5 text-white">
                         <div className="col-lg-4 pe-lg-5">
                             <a className="navbar-brand fs-4 fw-bold text-white mb-3 d-inline-flex align-items-center gap-2" href="#" onClick={(e) => { e.preventDefault(); onNavigate('landing'); }}>
-                                <img src="/favicon.png" alt="Tyqro Logo" style={{ height: '28px', width: 'auto', objectFit: 'contain' }} onError={(e) => { e.target.src = 'https://raw.githubusercontent.com/SUMAN1040/Tyqro/main/static/img/favicon.png'; }} /> Tyqro.
+                                <img src="/favicon.png" alt="Tyqro Logo" style={{ height: '28px', width: 'auto', objectFit: 'contain' }} onError={(e) => { e.target.src = 'https://raw.githubusercontent.com/SUMAN1040/Tyqro/main/static/img/favicon.png'; }} /> Tyqro
                             </a>
                             <p className="text-secondary lh-lg mb-4">The ultimate time tracking and productivity platform for freelancers, remote workers, and professionals who want to master their workflow.</p>
                         </div>
