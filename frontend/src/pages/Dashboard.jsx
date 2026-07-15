@@ -428,7 +428,7 @@ export default function Dashboard({ user }) {
 
             <div className="row g-4 mb-4">
                 {/* Attendance Timer Card */}
-                <div className="col-md-4">
+                <div className="col-12 col-md-6 col-lg-4">
                     <div className="card h-100 border-0 shadow-sm rounded-4">
                         <div className="card-body p-4 d-flex flex-column align-items-center justify-content-center text-center">
                             <h5 className="fw-bold mb-4">Work Attendance</h5>
@@ -492,7 +492,7 @@ export default function Dashboard({ user }) {
                 </div>
 
                 {/* Todo List Card */}
-                <div className="col-md-5">
+                <div className="col-12 col-md-6 col-lg-5">
                     <div className="card h-100 border-0 shadow-sm rounded-4">
                         <div className="card-body p-4 d-flex flex-column">
                             <div className="d-flex justify-content-between align-items-center mb-3">
@@ -546,7 +546,7 @@ export default function Dashboard({ user }) {
                 </div>
 
                 {/* Clock Card */}
-                <div className="col-md-3">
+                <div className="col-12 col-md-12 col-lg-3">
                     <div className="card h-100 border-0 shadow-sm rounded-4">
                         <div className="card-body p-4 d-flex flex-column align-items-center justify-content-center text-center">
                             <h5 className="fw-bold mb-4">Current Time</h5>
@@ -579,7 +579,7 @@ export default function Dashboard({ user }) {
                         <div className="card-body p-4">
                             <h5 className="fw-bold mb-4">Performance Heatmap</h5>
                             <div className="row">
-                                <div className="col-md-10">
+                                <div className="col-12 col-lg-10">
                                     <div className="d-flex mb-4 pb-2">
                                         <div className="heatmap-days text-muted small me-2 d-flex flex-column" style={{ marginTop: '0px', gap: '4px', fontSize: '0.75rem' }}>
                                             <div style={{ height: '14px', lineHeight: '14px' }}>Sun</div>
@@ -598,12 +598,12 @@ export default function Dashboard({ user }) {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="col-md-2 border-start">
-                                    <div className="list-group list-group-flush">
+                                <div className="col-12 col-lg-2 border-start-lg pt-3 pt-lg-0 mt-3 mt-lg-0">
+                                    <div className="d-flex flex-row flex-lg-column gap-2 justify-content-center justify-content-lg-start">
                                         {availableYears.map((y) => (
                                             <button
                                                 key={y}
-                                                className={`list-group-item list-group-item-action border-0 rounded my-1 text-center py-2 ${y === selectedYear ? 'active bg-primary text-white' : 'bg-transparent text-body'}`}
+                                                className={`btn btn-sm py-2 px-3 rounded-pill text-center ${y === selectedYear ? 'btn-primary text-white' : 'btn-outline-secondary'}`}
                                                 onClick={() => fetchHeatmap(y)}
                                             >
                                                 {y}

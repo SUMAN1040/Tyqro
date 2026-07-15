@@ -292,3 +292,9 @@ input:focus {
     background: rgba(18, 18, 18, 0.45);
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
+
+@media (min-width: 992px) {
+    .border-start-lg {
+        border-left: 1px solid var(--border-color) !important;
+    }
+}
