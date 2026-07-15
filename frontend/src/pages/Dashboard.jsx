@@ -336,10 +336,8 @@ export default function Dashboard({ user }) {
 
     // Heatmap calendar grid calculations
     const renderHeatmapGrid = () => {
-        const cells = [];
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const monthLabels = [];
-        let lastMonthSeen = -1;
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const monthGroups = Array.from({ length: 12 }, () => []);
 
         const startDate = new Date(selectedYear, 0, 1);
         // Shift start date to the beginning of the week (Sunday)
@@ -354,20 +352,14 @@ export default function Dashboard({ user }) {
 
         while (currentDay <= endDate || currentDay.getDay() !== 0) {
             if (currentDay.getDay() === 0) {
-                let recordedMonthForThisCol = false;
+                // Determine which month this week belongs to
+                let weekMonth = 0;
                 for (let row = 0; row < 7; row++) {
-                    const cellDate = new Date(currentDay);
-                    cellDate.setDate(cellDate.getDate() + row);
-                    
-                    if (cellDate.getFullYear() === selectedYear && cellDate.getMonth() !== lastMonthSeen) {
-                        if (!recordedMonthForThisCol) {
-                            monthLabels.push({
-                                label: monthNames[cellDate.getMonth()],
-                                colIndex: colIndex
-                            });
-                            lastMonthSeen = cellDate.getMonth();
-                            recordedMonthForThisCol = true;
-                        }
+                    const d = new Date(currentDay);
+                    d.setDate(d.getDate() + row);
+                    if (d.getFullYear() === selectedYear) {
+                        weekMonth = d.getMonth();
+                        break;
                     }
                 }
 
@@ -412,7 +404,7 @@ export default function Dashboard({ user }) {
                     currentDay.setDate(currentDay.getDate() + 1);
                 }
 
-                cells.push(
+                monthGroups[weekMonth].push(
                     <div key={colIndex} className="heatmap-col">
                         {columnCells}
                     </div>
@@ -420,11 +412,25 @@ export default function Dashboard({ user }) {
                 colIndex++;
             }
         }
-        return { cells, monthLabels };
+
+        const monthBlocks = monthGroups.map((weeks, monthIdx) => {
+            if (weeks.length === 0) return null;
+            return (
+                <div key={monthIdx} className="d-flex flex-column align-items-center" style={{ gap: '8px' }}>
+                    <div className="d-flex" style={{ gap: '4px' }}>
+                        {weeks}
+                    </div>
+                    <div className="text-muted small mt-1" style={{ fontSize: '0.75rem' }}>
+                        {monthNames[monthIdx]}
+                    </div>
+                </div>
+            );
+        });
+
+        return monthBlocks;
     };
 
     const activeTodosCount = todos.filter(t => t.is_completed).length;
-    const { cells: heatmapCells, monthLabels } = renderHeatmapGrid();
 
     return (
         <div className="text-start">
@@ -590,7 +596,7 @@ export default function Dashboard({ user }) {
                             <div className="row">
                                 <div className="col-md-10">
                                     <div className="d-flex mb-4 pb-2">
-                                        <div className="heatmap-days text-muted small me-2 d-flex flex-column" style={{ marginTop: '20px', gap: '4px', fontSize: '0.75rem' }}>
+                                        <div className="heatmap-days text-muted small me-2 d-flex flex-column" style={{ marginTop: '0px', gap: '4px', fontSize: '0.75rem' }}>
                                             <div style={{ height: '14px', lineHeight: '14px' }}>Sun</div>
                                             <div style={{ height: '14px', lineHeight: '14px' }}>Mon</div>
                                             <div style={{ height: '14px', lineHeight: '14px' }}>Tue</div>
@@ -601,15 +607,8 @@ export default function Dashboard({ user }) {
                                         </div>
                                         
                                         <div className="flex-grow-1 overflow-auto">
-                                            <div className="heatmap-months position-relative text-muted small mb-2" style={{ height: '20px', fontSize: '0.75rem', width: `${heatmapCells.length * 18}px` }}>
-                                                {monthLabels.map((ml, idx) => (
-                                                    <span key={idx} style={{ position: 'absolute', left: `${ml.colIndex * 18}px` }}>
-                                                        {ml.label}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                            <div className="heatmap-container d-flex" style={{ gap: '4px' }}>
-                                                {heatmapCells}
+                                            <div className="heatmap-container d-flex align-items-start" style={{ gap: '16px' }}>
+                                                {renderHeatmapGrid()}
                                             </div>
                                         </div>
                                     </div>
