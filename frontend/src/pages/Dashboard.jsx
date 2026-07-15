@@ -1,6 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { API } from '../api';
 
+const CLOCK_MARKERS = (() => {
+    const list = [];
+    for (let i = 1; i <= 12; i++) {
+        const angle = (i * 30 - 90) * (Math.PI / 180);
+        const radius = i % 3 === 0 ? 38 : 42;
+        const left = 50 + Math.cos(angle) * radius;
+        const top = 50 + Math.sin(angle) * radius;
+        list.push({
+            value: i,
+            isMain: i % 3 === 0,
+            style: {
+                left: `${left}%`,
+                top: `${top}%`
+            }
+        });
+    }
+    return list;
+})();
+
 export default function Dashboard({ user }) {
     const [currentDate, setCurrentDate] = useState('');
     
@@ -518,6 +537,15 @@ export default function Dashboard({ user }) {
                             <h5 className="fw-bold mb-4">Current Time</h5>
                             <div className="analog-clock mb-3">
                                 <div className="clock-face">
+                                    {CLOCK_MARKERS.map((marker) => (
+                                        <div
+                                            key={marker.value}
+                                            className={`clock-marker ${marker.isMain ? 'main-marker' : 'dot-marker'}`}
+                                            style={marker.style}
+                                        >
+                                            {marker.isMain ? marker.value : ''}
+                                        </div>
+                                    ))}
                                     <div className="hand hour-hand" style={{ transform: `rotate(${clockAngles.hour}deg)` }}></div>
                                     <div className="hand min-hand" style={{ transform: `rotate(${clockAngles.minute}deg)` }}></div>
                                     <div className="hand second-hand" style={{ transform: `rotate(${clockAngles.second}deg)` }}></div>
