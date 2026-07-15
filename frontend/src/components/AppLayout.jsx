@@ -4,8 +4,7 @@ import PasswordInput from './PasswordInput';
 
 export default function AppLayout({ user, onLogout, onUpdateUser, children }) {
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
-    const [notifications, setNotifications] = useState([]);
-    const [showNotifications, setShowNotifications] = useState(false);
+    const [showDropdown, setShowDropdown] = useState(false);
 
     // Modal states
     const [showProfileModal, setShowProfileModal] = useState(false);
@@ -53,31 +52,14 @@ export default function AppLayout({ user, onLogout, onUpdateUser, children }) {
         localStorage.setItem('theme', theme);
     }, [theme]);
 
-    // Fetch notifications
-    const fetchNotifications = async () => {
-        try {
-            const res = await API.get('/api/notifications/unread/');
-            setNotifications(res.data.notifications);
-        } catch (err) {
-            console.error('Failed to load notifications:', err);
-        }
-    };
-
+    // Close dropdown on click outside
     useEffect(() => {
-        fetchNotifications();
-        const interval = setInterval(fetchNotifications, 30000);
-        return () => clearInterval(interval);
-    }, []);
-
-    const markNotificationsRead = async () => {
-        if (notifications.length === 0) return;
-        try {
-            await API.post('/api/notifications/mark_read/');
-            setNotifications([]);
-        } catch (err) {
-            console.error('Failed to mark notifications read:', err);
+        const closeDropdown = () => setShowDropdown(false);
+        if (showDropdown) {
+            window.addEventListener('click', closeDropdown);
         }
-    };
+        return () => window.removeEventListener('click', closeDropdown);
+    }, [showDropdown]);
 
     // Profile form submission
     const handleProfileSubmit = async (e) => {
@@ -212,36 +194,14 @@ export default function AppLayout({ user, onLogout, onUpdateUser, children }) {
                     </a>
                     
                     <div className="ms-auto d-flex align-items-center">
-                        {/* Notifications Bell */}
-                        <div className="position-relative me-3">
-                            <button className="btn btn-link text-body p-0 position-relative" onClick={() => { setShowNotifications(!showNotifications); markNotificationsRead(); }}>
-                                <i className="bi bi-bell fs-5"></i>
-                                {notifications.length > 0 && (
-                                    <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: '0.65rem', padding: '0.25em 0.4em' }}>
-                                        {notifications.length}
-                                    </span>
-                                )}
-                            </button>
-                            
-                            {showNotifications && (
-                                <div className="dropdown-menu dropdown-menu-end border-0 shadow show position-absolute end-0 mt-2 p-2 bg-glass border" style={{ width: '280px', maxH: '300px', overflowY: 'auto' }}>
-                                    <h6 className="dropdown-header border-bottom pb-2 mb-2 fw-bold text-body">Notifications</h6>
-                                    {notifications.length === 0 ? (
-                                        <div className="text-center py-3 text-secondary small">No new notifications.</div>
-                                    ) : (
-                                        notifications.map((notif) => (
-                                            <div key={notif.id} className="p-2 border-bottom border-secondary-subtle small text-start">
-                                                {notif.message}
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
                         {/* Profile Dropdown */}
-                        <div className="dropdown me-3">
-                            <button className="btn btn-link text-body text-decoration-none dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div className="dropdown me-3 position-relative">
+                            <button 
+                                className="btn btn-link text-body text-decoration-none dropdown-toggle d-flex align-items-center gap-2" 
+                                type="button" 
+                                onClick={(e) => { e.stopPropagation(); setShowDropdown(!showDropdown); }}
+                                aria-expanded={showDropdown}
+                            >
                                 {user?.profile?.avatar_url ? (
                                     <img src={user.profile.avatar_url} alt="Profile" className="rounded-circle" style={{ width: '24px', height: '24px', objectFit: 'cover' }} />
                                 ) : (
@@ -249,12 +209,12 @@ export default function AppLayout({ user, onLogout, onUpdateUser, children }) {
                                 )}
                                 <span className="d-none d-md-inline">{user?.first_name || user?.username}</span>
                             </button>
-                            <ul className="dropdown-menu dropdown-menu-end border-0 shadow">
-                                <li><a className="dropdown-item" href="#" onClick={(e) => { e.preventDefault(); setShowProfileModal(true); }}><i className="bi bi-person-circle me-2"></i>Profile</a></li>
-                                <li><a className="dropdown-item" href="#" onClick={(e) => { e.preventDefault(); setShowSettingsModal(true); }}><i className="bi bi-gear me-2"></i>Settings</a></li>
+                            <ul className={`dropdown-menu dropdown-menu-end border-0 shadow ${showDropdown ? 'show' : ''}`} style={{ position: 'absolute', right: 0, top: '100%' }}>
+                                <li><a className="dropdown-item" href="#" onClick={(e) => { e.preventDefault(); setShowProfileModal(true); setShowDropdown(false); }}><i className="bi bi-person-circle me-2"></i>Profile</a></li>
+                                <li><a className="dropdown-item" href="#" onClick={(e) => { e.preventDefault(); setShowSettingsModal(true); setShowDropdown(false); }}><i className="bi bi-gear me-2"></i>Settings</a></li>
                                 <li><hr className="dropdown-divider" /></li>
                                 <li>
-                                    <button onClick={onLogout} className="dropdown-item text-danger"><i className="bi bi-box-arrow-right me-2"></i>Logout</button>
+                                    <button onClick={() => { onLogout(); setShowDropdown(false); }} className="dropdown-item text-danger"><i className="bi bi-box-arrow-right me-2"></i>Logout</button>
                                 </li>
                             </ul>
                         </div>
