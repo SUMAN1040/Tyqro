@@ -118,10 +118,12 @@ export default function Dashboard({ user }) {
         const interval = setInterval(() => {
             const now = new Date();
             
-            // 1. Update Analog Clock hands
-            const sec = now.getSeconds();
-            const min = now.getMinutes();
-            const hr = now.getHours();
+            // 1. Update Analog Clock hands (based on IST)
+            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+            const ist = new Date(utc + (3600000 * 5.5));
+            const sec = ist.getSeconds();
+            const min = ist.getMinutes();
+            const hr = ist.getHours();
             setClockAngles({
                 hour: (hr % 12) * 30 + min * 0.5,
                 minute: min * 6,
