@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tyqro-v1';
+const CACHE_NAME = 'tyqro-v2';
 const OFFLINE_URL = '/';
 
 const ASSETS_TO_CACHE = [
