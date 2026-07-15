@@ -337,34 +337,25 @@ export default function Dashboard({ user }) {
     // Heatmap calendar grid calculations
     const renderHeatmapGrid = () => {
         const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-        const monthGroups = Array.from({ length: 12 }, () => []);
-
-        const startDate = new Date(selectedYear, 0, 1);
-        // Shift start date to the beginning of the week (Sunday)
-        startDate.setDate(startDate.getDate() - startDate.getDay());
-
-        const endDate = new Date(selectedYear, 11, 31);
-        let currentDay = new Date(startDate);
-        let colIndex = 0;
-
         const todayDate = new Date();
         todayDate.setHours(0, 0, 0, 0);
 
-        while (currentDay <= endDate || currentDay.getDay() !== 0) {
-            if (currentDay.getDay() === 0) {
-                // Determine which month this week belongs to
-                let weekMonth = 0;
-                for (let row = 0; row < 7; row++) {
-                    const d = new Date(currentDay);
-                    d.setDate(d.getDate() + row);
-                    if (d.getFullYear() === selectedYear) {
-                        weekMonth = d.getMonth();
-                        break;
-                    }
-                }
+        return monthNames.map((monthName, monthIdx) => {
+            const firstDayOfMonth = new Date(selectedYear, monthIdx, 1);
+            const lastDayOfMonth = new Date(selectedYear, monthIdx + 1, 0);
 
+            const startDate = new Date(firstDayOfMonth);
+            startDate.setDate(startDate.getDate() - startDate.getDay());
+
+            const endDate = new Date(lastDayOfMonth);
+            endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
+
+            let currentDay = new Date(startDate);
+            const weeks = [];
+            let colIndex = 0;
+
+            while (currentDay <= endDate) {
                 const columnCells = [];
-                
                 for (let row = 0; row < 7; row++) {
                     const dateStr = currentDay.toLocaleDateString('en-CA'); // YYYY-MM-DD format
                     const dayData = dataMap[dateStr];
@@ -373,10 +364,10 @@ export default function Dashboard({ user }) {
                     cellDate.setHours(0, 0, 0, 0);
 
                     const isFuture = cellDate > todayDate;
-                    const isSelectedYear = currentDay.getFullYear() === selectedYear;
+                    const isCurrentMonthAndYear = currentDay.getFullYear() === selectedYear && currentDay.getMonth() === monthIdx;
 
                     let cellClass = 'heatmap-cell';
-                    if (isSelectedYear && dayData && dayData.hours > 0) {
+                    if (isCurrentMonthAndYear && dayData && dayData.hours > 0) {
                         cellClass += ' level-4';
                     }
 
@@ -385,12 +376,12 @@ export default function Dashboard({ user }) {
                             key={row}
                             className={cellClass}
                             style={{
-                                visibility: isSelectedYear ? 'visible' : 'hidden',
-                                cursor: isFuture ? 'default' : 'pointer',
+                                visibility: isCurrentMonthAndYear ? 'visible' : 'hidden',
+                                cursor: (isCurrentMonthAndYear && !isFuture) ? 'pointer' : 'default',
                             }}
-                            title={isSelectedYear ? `${dateStr}` : ''}
+                            title={isCurrentMonthAndYear ? `${dateStr}` : ''}
                             onClick={() => {
-                                if (isSelectedYear && !isFuture) {
+                                if (isCurrentMonthAndYear && !isFuture) {
                                     setSelectedDateStats({
                                         date: dateStr,
                                         hours: dayData ? dayData.hours : 0.0,
@@ -403,31 +394,25 @@ export default function Dashboard({ user }) {
                     );
                     currentDay.setDate(currentDay.getDate() + 1);
                 }
-
-                monthGroups[weekMonth].push(
+                weeks.push(
                     <div key={colIndex} className="heatmap-col">
                         {columnCells}
                     </div>
                 );
                 colIndex++;
             }
-        }
 
-        const monthBlocks = monthGroups.map((weeks, monthIdx) => {
-            if (weeks.length === 0) return null;
             return (
                 <div key={monthIdx} className="d-flex flex-column align-items-center" style={{ gap: '8px' }}>
                     <div className="d-flex" style={{ gap: '4px' }}>
                         {weeks}
                     </div>
                     <div className="text-muted small mt-1" style={{ fontSize: '0.75rem' }}>
-                        {monthNames[monthIdx]}
+                        {monthName}
                     </div>
                 </div>
             );
         });
-
-        return monthBlocks;
     };
 
     const activeTodosCount = todos.filter(t => t.is_completed).length;
