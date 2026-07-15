@@ -190,7 +190,7 @@ export default function AppLayout({ user, onLogout, onUpdateUser, children }) {
             <nav className="navbar navbar-expand py-3 px-4 border-bottom border-secondary-subtle bg-glass sticky-top" style={{ zIndex: 1020 }}>
                 <div className="container-fluid px-0 d-flex align-items-center justify-content-between">
                     <a className="navbar-brand fs-4 fw-bold text-body d-flex align-items-center gap-2" href="#" onClick={(e) => e.preventDefault()}>
-                        <img src="/favicon.png" alt="Tyqro Logo" style={{ height: '28px', width: 'auto', objectFit: 'contain' }} onError={(e) => { e.target.src = 'https://raw.githubusercontent.com/SUMAN1040/Tyqro/main/static/img/favicon.png'; }} /> Tyqro.
+                        <img src="/favicon.png" alt="Tyqro Logo" style={{ height: '28px', width: 'auto', objectFit: 'contain' }} onError={(e) => { e.target.src = 'https://raw.githubusercontent.com/SUMAN1040/Tyqro/main/static/img/favicon.png'; }} /> Tyqro
                     </a>
                     
                     <div className="ms-auto d-flex align-items-center">

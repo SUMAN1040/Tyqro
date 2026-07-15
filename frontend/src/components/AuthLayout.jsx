@@ -93,7 +93,7 @@ export default function AuthLayout({ children, onNavigate, error, success, onDis
                     {/* Logo for mobile */}
                     <div className="d-lg-none text-center mb-4">
                         <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('landing'); }} className="d-inline-flex align-items-center gap-2 text-decoration-none text-white fw-bold fs-3">
-                            <img src="/favicon.png" alt="Tyqro Logo" style={{ height: '36px', width: 'auto', objectFit: 'contain' }} onError={(e) => { e.target.src = 'https://raw.githubusercontent.com/SUMAN1040/Tyqro/main/static/img/favicon.png'; }} /> Tyqro.
+                            <img src="/favicon.png" alt="Tyqro Logo" style={{ height: '36px', width: 'auto', objectFit: 'contain' }} onError={(e) => { e.target.src = 'https://raw.githubusercontent.com/SUMAN1040/Tyqro/main/static/img/favicon.png'; }} /> Tyqro
                         </a>
                     </div>
                     

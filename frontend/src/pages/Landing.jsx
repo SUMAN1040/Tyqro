@@ -345,7 +345,7 @@ export default function Landing({ onNavigate }) {
 
                     <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 text-secondary">
                         <div className="small">
-                            &copy; 2026 Tyqro. All rights reserved.
+                            &copy; 2026 Tyqro All rights reserved.
                         </div>
                         <div className="small d-flex align-items-center gap-1">
                             Made with <i className="bi bi-heart-fill text-danger mx-1"></i> for productivity.
