@@ -24,7 +24,7 @@ export default function ForgotPassword({ onNavigate }) {
 
         setLoading(true);
         try {
-            await API.post('/api/auth/forgot-password/', { email: email.trim().lower() });
+            await API.post('/api/auth/forgot-password/', { email: email.trim().toLowerCase() });
             setSuccess('We have sent a verification code to your email.');
             setStep(2);
         } catch (err) {
@@ -48,7 +48,7 @@ export default function ForgotPassword({ onNavigate }) {
         setLoading(true);
         try {
             await API.post('/api/auth/forgot-password/reset/', {
-                email: email.trim().lower(),
+                email: email.trim().toLowerCase(),
                 otp: otp.trim(),
                 new_password: newPassword,
             });

@@ -22,7 +22,7 @@ export default function Login({ onNavigate, onLoginSuccess }) {
         setLoading(true);
         try {
             const response = await API.post('/api/auth/login/', {
-                username: email.trim().lower(),
+                username: email.trim().toLowerCase(),
                 password: password,
             });
             localStorage.setItem('access_token', response.data.access);

@@ -26,11 +26,11 @@ export default function Signup({ onNavigate }) {
             const response = await API.post('/api/auth/signup/', {
                 first_name: firstName.trim(),
                 last_name: lastName.trim(),
-                email: email.trim().lower(),
+                email: email.trim().toLowerCase(),
                 password: password,
                 password_confirm: passwordConfirm,
             });
-            onNavigate('verify_otp', { user_id: response.data.user_id, email: email.trim().lower() });
+            onNavigate('verify_otp', { user_id: response.data.user_id, email: email.trim().toLowerCase() });
         } catch (err) {
             console.error('Signup API Error:', err);
             const errMsg = err.response?.data?.error || err.response?.data?.detail || 'Registration failed. Please check your inputs.';
