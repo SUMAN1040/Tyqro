@@ -176,7 +176,7 @@ export default function Dashboard({ user }) {
 
     const proceedStartWork = async () => {
         setShowConfirmStart(false);
-        setError('');
+        setReasonError('');
 
         // Fixed Mode: Check if clocking in late
         if (user?.profile?.use_fixed_schedule) {

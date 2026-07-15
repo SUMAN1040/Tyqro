@@ -50,6 +50,18 @@ export default function App() {
         return () => window.removeEventListener('auth_logout', handleGlobalLogout);
     }, []);
 
+    useEffect(() => {
+        const titles = {
+            landing: 'Tyqro | Simplify Your Day',
+            login: 'Sign In | Tyqro',
+            signup: 'Sign Up | Tyqro',
+            verify_otp: 'Verify Account | Tyqro',
+            forgot_password: 'Reset Password | Tyqro',
+            dashboard: 'Dashboard | Tyqro'
+        };
+        document.title = titles[page] || 'Tyqro | Simplify Your Day';
+    }, [page]);
+
     const handleLoginSuccess = () => {
         checkAuthStatus();
     };

@@ -26,6 +26,9 @@ if csrf_origins:
 else:
     CSRF_TRUSTED_ORIGINS = ['https://*.vercel.app']
 
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS += ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:8000', 'http://127.0.0.1:8000']
+
 # Production Security Settings (Enabled when DEBUG is False)
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
