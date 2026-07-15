@@ -62,16 +62,16 @@ export default function Landing({ onNavigate }) {
                                     <span className="badge bg-primary rounded-pill">New</span>
                                     <span className="small text-dark fw-medium">The all-in-one productivity suite</span>
                                 </div>
-                                
+
                                 <h1 className="display-3 fw-bold mb-4 lh-tight text-dark" style={{ letterSpacing: '-0.04em' }}>
                                     Master your time.<br/>
                                     <span style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Elevate your work.</span>
                                 </h1>
-                                
+
                                 <p className="lead text-secondary mb-5 fs-5 lh-base">
                                     Tyqro is the ultimate productivity dashboard. Combine precision time tracking, intuitive task management, and powerful analytics into one seamless, beautifully designed platform.
                                 </p>
-                                
+
                                 <div className="d-flex flex-column flex-sm-row gap-3 justify-content-center justify-content-lg-start">
                                     <button onClick={() => onNavigate('signup')} className="btn btn-primary btn-lg rounded-pill px-5 py-3 fw-bold shadow-lg d-flex align-items-center justify-content-center gap-2">
                                         Start for free <i className="bi bi-arrow-right"></i>
@@ -85,12 +85,12 @@ export default function Landing({ onNavigate }) {
                                     <span><i className="bi bi-check-circle-fill text-success me-1"></i> Free forever</span>
                                 </div>
                             </div>
-                            
+
                             {/* Dashboard Mockup */}
                             <div className="col-lg-6">
                                 <div className="position-relative hero-image-container" style={{ transform: 'perspective(1000px) rotateY(-5deg) rotateX(2deg)', transition: 'transform 0.5s ease' }}>
                                     <div className="position-absolute top-50 start-50 translate-middle w-100 h-100 bg-primary opacity-20 rounded-circle" style={{ filter: 'blur(100px)', zIndex: -1 }}></div>
-                                    
+
                                     <div className="border border-dark border-opacity-25 rounded-4 shadow-lg p-4 w-100" style={{ backdropFilter: 'blur(20px)', background: 'rgba(33, 37, 41, 0.9)' }}>
                                         <div className="d-flex align-items-center mb-4 pb-3 border-bottom border-light border-opacity-10">
                                             <div className="d-flex gap-2">
@@ -100,7 +100,7 @@ export default function Landing({ onNavigate }) {
                                             </div>
                                             <div className="ms-auto text-secondary small fw-medium" style={{ letterSpacing: '1px' }}>tyqro.app</div>
                                         </div>
-                                        
+
                                         <div className="row g-3 text-start">
                                             {/* Sidebar Mockup */}
                                             <div className="col-4">
@@ -117,7 +117,7 @@ export default function Landing({ onNavigate }) {
                                                     </div>
                                                 </div>
                                             </div>
-                                            
+
                                             {/* Main Content Mockup */}
                                             <div className="col-8">
                                                 <div className="bg-light rounded-3 p-4 mb-4 border border-dark border-opacity-10 text-center shadow-sm">
@@ -125,7 +125,7 @@ export default function Landing({ onNavigate }) {
                                                     <div className="display-4 fw-bold text-dark font-monospace" style={{ letterSpacing: '-2px' }}>{istTime}</div>
                                                     <div className="mt-3 bg-gradient rounded-pill mx-auto" style={{ height: '6px', width: '60%', background: 'linear-gradient(90deg, #4facfe 0%, #00f2fe 100%)' }}></div>
                                                 </div>
-                                                
+
                                                 <div className="d-flex flex-column gap-3">
                                                     <div className="d-flex align-items-center gap-3 bg-white bg-opacity-10 p-3 rounded-3 border border-light border-opacity-10">
                                                         <div className="rounded-circle bg-success opacity-75" style={{ width: '16px', height: '16px' }}></div>
@@ -167,7 +167,7 @@ export default function Landing({ onNavigate }) {
                             <h2 className="display-5 fw-bold mb-3 mt-2 text-dark">Everything you need. <br className="d-none d-md-block"/>Nothing you don't.</h2>
                             <p className="lead text-secondary mx-auto" style={{ maxWidth: '700px' }}>We've carefully crafted Tyqro to provide the essential tools for maximum productivity, completely eliminating the clutter found in enterprise software.</p>
                         </div>
-                        
+
                         <div className="row g-4 g-lg-5">
                             <div className="col-md-4">
                                 <article className="card h-100 bg-white shadow-sm border-dark border-opacity-10 p-4 p-xl-5 rounded-4 glass-card">
@@ -312,7 +312,7 @@ export default function Landing({ onNavigate }) {
                             </a>
                             <p className="text-secondary lh-lg mb-4">The ultimate time tracking and productivity platform for freelancers, remote workers, and professionals who want to master their workflow.</p>
                         </div>
-                        
+
                         <div className="col-6 col-lg-2 offset-lg-2">
                             <h5 className="text-white mb-4 fs-6 fw-bold text-uppercase" style={{ letterSpacing: '0.1em' }}>Product</h5>
                             <ul className="list-unstyled mb-0 d-flex flex-column gap-3">
@@ -322,7 +322,7 @@ export default function Landing({ onNavigate }) {
                                 <li><a href="#" onClick={(e) => { e.preventDefault(); onNavigate('signup'); }} className="text-secondary text-decoration-none">Sign up</a></li>
                             </ul>
                         </div>
-                        
+
                         <div className="col-6 col-lg-2">
                             <h5 className="text-white mb-4 fs-6 fw-bold text-uppercase" style={{ letterSpacing: '0.1em' }}>Resources</h5>
                             <ul className="list-unstyled mb-0 d-flex flex-column gap-3">
@@ -331,7 +331,7 @@ export default function Landing({ onNavigate }) {
                                 <li><a href="#" className="text-secondary text-decoration-none">Contact</a></li>
                             </ul>
                         </div>
-                        
+
                         <div className="col-6 col-lg-2">
                             <h5 className="text-white mb-4 fs-6 fw-bold text-uppercase" style={{ letterSpacing: '0.1em' }}>Legal</h5>
                             <ul className="list-unstyled mb-0 d-flex flex-column gap-3">
@@ -340,9 +340,9 @@ export default function Landing({ onNavigate }) {
                             </ul>
                         </div>
                     </div>
-                    
+
                     <hr className="border-dark border-opacity-10 mb-4" />
-                    
+
                     <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 text-secondary">
                         <div className="small">
                             &copy; 2026 Tyqro. All rights reserved.

@@ -44,7 +44,7 @@ export default function Signup({ onNavigate }) {
         <AuthLayout onNavigate={onNavigate} error={error} onDismissAlerts={() => setError('')}>
             <h3 className="text-center fw-bold text-white mb-2">Create Account</h3>
             <p className="text-center text-secondary small mb-4">Join thousands of productive professionals.</p>
-            
+
             <form onSubmit={handleSubmit}>
                 <div className="row g-2 mb-3 text-start">
                     <div className="col-6">

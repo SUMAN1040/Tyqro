@@ -45,7 +45,7 @@ export default function VerifyOTP({ onNavigate, navData }) {
             <p className="text-secondary small text-center mb-4">
                 We've sent a 6-digit verification code to <strong className="text-light">{email}</strong>.
             </p>
-            
+
             <form onSubmit={handleSubmit}>
                 <div className="mb-4 text-center">
                     <label className="form-label text-secondary small fw-medium text-center d-block w-100 mb-2" htmlFor="otp">
