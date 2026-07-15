@@ -619,7 +619,7 @@ export default function Dashboard({ user }) {
                             </div>
                             <div className="row text-center g-3 justify-content-center">
                                 <div className="col-6 col-md-4">
-                                    <div className="p-3 bg-light rounded-4">
+                                    <div className="p-3 bg-light rounded-4 h-100 d-flex flex-column justify-content-center">
                                         <div className="text-muted small fw-medium text-uppercase">Tasks Done</div>
                                         <div className="fs-4 fw-bold text-info">
                                             {selectedDateStats.completed} / {selectedDateStats.total}
@@ -627,7 +627,7 @@ export default function Dashboard({ user }) {
                                     </div>
                                 </div>
                                 <div className="col-6 col-md-4">
-                                    <div className="p-3 bg-light rounded-4">
+                                    <div className="p-3 bg-light rounded-4 h-100 d-flex flex-column justify-content-center">
                                         <div className="text-muted small fw-medium text-uppercase">Hours Worked</div>
                                         <div className="fs-4 fw-bold text-success">
                                             {parseFloat(selectedDateStats.hours).toFixed(1)}
