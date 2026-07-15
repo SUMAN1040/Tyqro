@@ -125,9 +125,9 @@ export default function Dashboard({ user }) {
             const min = ist.getMinutes();
             const hr = ist.getHours();
             setClockAngles({
-                hour: (hr % 12) * 30 + min * 0.5,
-                minute: min * 6,
-                second: sec * 6
+                hour: ((hr % 12) * 30) + (min * 0.5) - 90,
+                minute: (min * 6) - 90,
+                second: (sec * 6) - 90
             });
 
             // 2. Update Work Timers
