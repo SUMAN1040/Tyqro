@@ -56,6 +56,7 @@ export default function Dashboard({ user }) {
     const [reasonText, setReasonText] = useState('');
     const [reasonError, setReasonError] = useState('');
     const [showConfirmStart, setShowConfirmStart] = useState(false);
+    const autoEndAttempted = useRef(false);
 
     // Fetch initial status and todos
     const fetchStatusAndTodos = async () => {
@@ -64,6 +65,9 @@ export default function Dashboard({ user }) {
             const statusRes = await API.get('/api/attendance/status/');
             const status = statusRes.data;
             setIsActive(status.is_active);
+            if (!status.is_active) {
+                autoEndAttempted.current = false;
+            }
             setStartTime(status.start_time ? new Date(status.start_time) : null);
             setEndTime(status.end_time ? new Date(status.end_time) : null);
             setTotalBreakSeconds(status.total_break_duration);
@@ -135,14 +139,37 @@ export default function Dashboard({ user }) {
                 const totalElapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000);
                 setTotalSeconds(totalElapsed);
 
+                let currentNetSeconds = 0;
                 if (isBreak && currentBreakStart) {
                     const activeBreak = Math.floor((now.getTime() - currentBreakStart.getTime()) / 1000);
                     const accumBreak = totalBreakSeconds + activeBreak;
                     setBreakSeconds(accumBreak);
-                    setNetSeconds(totalElapsed - accumBreak);
+                    currentNetSeconds = totalElapsed - accumBreak;
+                    setNetSeconds(currentNetSeconds);
                 } else {
                     setBreakSeconds(totalBreakSeconds);
-                    setNetSeconds(totalElapsed - totalBreakSeconds);
+                    currentNetSeconds = totalElapsed - totalBreakSeconds;
+                    setNetSeconds(currentNetSeconds);
+                }
+
+                // Check for auto-end
+                if (!user?.profile?.use_fixed_schedule) {
+                    const targetSeconds = parseFloat(user?.profile?.daily_hours_target || 9.0) * 3600;
+                    if (currentNetSeconds >= targetSeconds && !autoEndAttempted.current) {
+                        autoEndAttempted.current = true;
+                        proceedEndWork();
+                    }
+                } else {
+                    const endTimeStr = user?.profile?.work_end_time;
+                    if (endTimeStr) {
+                        const [eh, em] = endTimeStr.split(':').map(Number);
+                        const endLimit = new Date();
+                        endLimit.setHours(eh, em, 0, 0);
+                        if (now >= endLimit && !autoEndAttempted.current) {
+                            autoEndAttempted.current = true;
+                            proceedEndWork();
+                        }
+                    }
                 }
             } else if (startTime && endTime) {
                 const totalElapsed = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
@@ -157,7 +184,7 @@ export default function Dashboard({ user }) {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [isActive, isBreak, startTime, endTime, totalBreakSeconds, currentBreakStart]);
+    }, [isActive, isBreak, startTime, endTime, totalBreakSeconds, currentBreakStart, user]);
 
     // Word validation for reasons
     const countWords = (text) => {
