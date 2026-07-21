@@ -135,7 +135,7 @@ export default function Dashboard({ user }) {
             });
 
             // 2. Update Work Timers
-            if (isActive && startTime) {
+            if (isActive && startTime && !autoEndAttempted.current) {
                 const totalElapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000);
                 setTotalSeconds(totalElapsed);
 
@@ -155,9 +155,18 @@ export default function Dashboard({ user }) {
                 // Check for auto-end
                 if (!user?.profile?.use_fixed_schedule) {
                     const targetSeconds = parseFloat(user?.profile?.daily_hours_target || 9.0) * 3600;
-                    if (currentNetSeconds >= targetSeconds && !autoEndAttempted.current) {
+                    if (currentNetSeconds >= targetSeconds) {
                         autoEndAttempted.current = true;
-                        proceedEndWork();
+                        // Stop visually immediately
+                        setNetSeconds(targetSeconds);
+                        setTotalSeconds(targetSeconds + totalBreakSeconds);
+                        
+                        API.post('/api/attendance/end/', {})
+                            .then(() => {
+                                fetchStatusAndTodos();
+                                fetchHeatmap(selectedYear);
+                            })
+                            .catch((err) => console.error('Failed to auto end work', err));
                     }
                 } else {
                     const endTimeStr = user?.profile?.work_end_time;
@@ -165,9 +174,14 @@ export default function Dashboard({ user }) {
                         const [eh, em] = endTimeStr.split(':').map(Number);
                         const endLimit = new Date();
                         endLimit.setHours(eh, em, 0, 0);
-                        if (now >= endLimit && !autoEndAttempted.current) {
+                        if (now >= endLimit) {
                             autoEndAttempted.current = true;
-                            proceedEndWork();
+                            API.post('/api/attendance/end/', {})
+                                .then(() => {
+                                    fetchStatusAndTodos();
+                                    fetchHeatmap(selectedYear);
+                                })
+                                .catch((err) => console.error('Failed to auto end work', err));
                         }
                     }
                 }
@@ -355,9 +369,11 @@ export default function Dashboard({ user }) {
 
     // Format seconds to HH:MM:SS
     const formatTime = (totalSecs) => {
-        const hrs = String(Math.floor(totalSecs / 3600)).padStart(2, '0');
-        const mins = String(Math.floor((totalSecs % 3600) / 60)).padStart(2, '0');
-        const secs = String(totalSecs % 60).padStart(2, '0');
+        // Ensure we don't have negative time
+        const safeSecs = Math.max(0, totalSecs);
+        const hrs = String(Math.floor(safeSecs / 3600)).padStart(2, '0');
+        const mins = String(Math.floor((safeSecs % 3600) / 60)).padStart(2, '0');
+        const secs = String(Math.floor(safeSecs % 60)).padStart(2, '0');
         return `${hrs}:${mins}:${secs}`;
     };
 
