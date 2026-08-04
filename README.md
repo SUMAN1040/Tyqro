@@ -47,6 +47,7 @@ Tyqro is a modern productivity and attendance tracking web application designed 
     source venv/bin/activate  # On Windows use: venv\Scripts\activate
     ```
 
+
 3.  **Install dependencies**:
     ```bash
     pip install -r requirements.txt
