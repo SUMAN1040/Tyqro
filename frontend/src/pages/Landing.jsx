@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 export default function Landing({ onNavigate }) {
     const [istTime, setIstTime] = useState('00:00:00');
+    const [isNavOpen, setIsNavOpen] = useState(false);
 
     useEffect(() => {
         const updateTimer = () => {
@@ -24,21 +25,51 @@ export default function Landing({ onNavigate }) {
         <div style={{ backgroundColor: '#f8f9fa', color: '#212529', minHeight: '100vh', width: '100vw', overflowX: 'hidden' }}>
             {/* Header / Navbar */}
             <header>
-                <nav className="navbar navbar-expand-lg py-2 px-4 px-lg-5 position-fixed top-0 start-50 translate-middle-x mt-4 rounded-pill shadow-sm" style={{ width: '90%', maxWidth: '800px', background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(0,0,0,0.05)', zIndex: 1030 }}>
+                <nav 
+                    className={`navbar navbar-expand-lg py-2 px-3 px-lg-5 position-fixed top-0 start-50 translate-middle-x mt-3 mt-lg-4 ${isNavOpen ? 'rounded-4' : 'rounded-pill'} shadow-sm`} 
+                    style={{ 
+                        width: '92%', 
+                        maxWidth: '850px', 
+                        background: 'rgba(255, 255, 255, 0.98)', 
+                        backdropFilter: 'blur(16px)', 
+                        border: '1px solid rgba(0,0,0,0.08)', 
+                        zIndex: 1030,
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                    }}
+                >
                     <div className="container-fluid px-0">
-                        <a className="navbar-brand fs-5 fw-bold text-dark d-flex align-items-center gap-2" href="#" onClick={(e) => { e.preventDefault(); onNavigate('landing'); }}>
+                        <a className="navbar-brand fs-5 fw-bold text-dark d-flex align-items-center gap-2" href="#" onClick={(e) => { e.preventDefault(); setIsNavOpen(false); onNavigate('landing'); }}>
                             <img src="/favicon.png" alt="Tyqro Logo" style={{ height: '24px', width: 'auto', objectFit: 'contain' }} onError={(e) => { e.target.src = 'https://raw.githubusercontent.com/SUMAN1040/Tyqro/main/static/img/favicon.png'; }} /> Tyqro
                         </a>
-                        <button className="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#publicNav" aria-label="Toggle navigation">
-                            <span className="navbar-toggler-icon"></span>
+                        <button 
+                            className="navbar-toggler border-0 p-1 shadow-none" 
+                            type="button" 
+                            onClick={() => setIsNavOpen(!isNavOpen)} 
+                            aria-label="Toggle navigation"
+                        >
+                            <i className={`bi ${isNavOpen ? 'bi-x-lg fs-4 text-dark' : 'bi-list fs-3 text-dark'}`}></i>
                         </button>
-                        <div className="collapse navbar-collapse" id="publicNav">
-                            <div className="ms-auto d-flex flex-column flex-lg-row align-items-center gap-2 gap-lg-4">
-                                <ul className="navbar-nav mb-2 mb-lg-0 gap-2 gap-lg-3">
-                                    <li className="nav-item"><a className="nav-link text-secondary fw-medium px-2" href="#features">Features</a></li>
-                                    <li className="nav-item"><a className="nav-link text-secondary fw-medium px-2" href="#how-it-works">How It Works</a></li>
-                                    <li className="nav-item"><a className="nav-link text-secondary fw-medium px-2" href="#benefits">Benefits</a></li>
+                        <div className={`collapse navbar-collapse ${isNavOpen ? 'show mt-3 pt-3 border-top border-secondary-subtle' : ''}`} id="publicNav">
+                            <div className="ms-auto d-flex flex-column flex-lg-row align-items-center gap-2 gap-lg-4 w-100 justify-content-end">
+                                <ul className="navbar-nav mb-2 mb-lg-0 gap-2 gap-lg-3 text-center">
+                                    <li className="nav-item">
+                                        <a className="nav-link text-secondary fw-medium px-2 py-1" href="#features" onClick={() => setIsNavOpen(false)}>Features</a>
+                                    </li>
+                                    <li className="nav-item">
+                                        <a className="nav-link text-secondary fw-medium px-2 py-1" href="#how-it-works" onClick={() => setIsNavOpen(false)}>How It Works</a>
+                                    </li>
+                                    <li className="nav-item">
+                                        <a className="nav-link text-secondary fw-medium px-2 py-1" href="#benefits" onClick={() => setIsNavOpen(false)}>Benefits</a>
+                                    </li>
                                 </ul>
+                                <div className="d-flex align-items-center gap-2 mt-2 mt-lg-0 w-100 w-lg-auto justify-content-center">
+                                    <button onClick={() => { setIsNavOpen(false); onNavigate('login'); }} className="btn btn-outline-dark btn-sm rounded-pill px-3 py-1 fw-medium">
+                                        Sign In
+                                    </button>
+                                    <button onClick={() => { setIsNavOpen(false); onNavigate('signup'); }} className="btn btn-primary btn-sm rounded-pill px-3 py-1 fw-medium text-white shadow-sm">
+                                        Get Started
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
