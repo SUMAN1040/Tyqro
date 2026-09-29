@@ -23,11 +23,14 @@ urlpatterns = [
     path('api/auth/forgot-password/', views.forgot_password, name='api_forgot_password'),
     path('api/auth/forgot-password/reset/', views.reset_password, name='api_reset_password'),
 
-    # Group Study Endpoints
+    # Study / Connected Peers Endpoints
     path('api/study/code/', study_views.get_study_code, name='api_study_code'),
     path('api/study/join/', study_views.join_study_group, name='api_study_join'),
+    path('api/study/connect/', study_views.join_study_group, name='api_study_connect'),
     path('api/study/status/', study_views.get_group_status, name='api_study_status'),
+    path('api/study/peers/', study_views.get_group_status, name='api_study_peers'),
     path('api/study/leave/', study_views.leave_study_group, name='api_study_leave'),
     path('api/study/remove-member/', study_views.remove_group_member, name='api_study_remove_member'),
+    path('api/study/remove-peer/', study_views.remove_group_member, name='api_study_remove_peer'),
     path('api/study/peer/<int:peer_id>/', study_views.get_peer_data, name='api_study_peer_data'),
 ]

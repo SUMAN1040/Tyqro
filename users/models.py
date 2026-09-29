@@ -52,6 +52,18 @@ class StudyGroupMembership(models.Model):
     def __str__(self):
         return f"{self.user.username} in group {self.group.code}"
 
+class PeerConnection(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='peer_connections')
+    peer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='connected_by_peers')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'peer')
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.user.username} -> {self.peer.username}"
+
 @receiver(post_save, sender=User)
 def create_or_save_user_profile(sender, instance, created, **kwargs):
     if created:

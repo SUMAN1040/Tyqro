@@ -5,13 +5,16 @@ export default function GroupStudyPeerPanel({
     user,
     groupStatus,
     onCloseSplitView,
-    onOpenModal
+    onOpenModal,
+    onRefreshGroup
 }) {
-    const peers = (groupStatus?.members || []).filter(m => !m.is_self);
+    const peers = groupStatus?.peers || groupStatus?.members || [];
     const [selectedPeerId, setSelectedPeerId] = useState(peers[0]?.id || null);
     const [peerData, setPeerData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [liveSeconds, setLiveSeconds] = useState(0);
+    const [liveBreakSeconds, setLiveBreakSeconds] = useState(0);
+    const [liveNetSeconds, setLiveNetSeconds] = useState(0);
 
     // Keep selectedPeerId valid if peers list updates
     useEffect(() => {
@@ -30,6 +33,8 @@ export default function GroupStudyPeerPanel({
             const res = await API.get(`/api/study/peer/${peerId}/`);
             setPeerData(res.data);
             setLiveSeconds(res.data.attendance?.total_seconds || 0);
+            setLiveBreakSeconds(res.data.attendance?.total_break_seconds || 0);
+            setLiveNetSeconds(res.data.attendance?.net_seconds || 0);
         } catch (err) {
             console.error('Failed to load peer data:', err);
         } finally {
@@ -55,18 +60,48 @@ export default function GroupStudyPeerPanel({
         return () => clearInterval(pollInterval);
     }, [selectedPeerId]);
 
-    // Live ticking timer for peer if actively working
+    // Live ticking timers for peer if actively working
     useEffect(() => {
-        const interval = setInterval(() => {
-            if (peerData?.attendance?.is_active && peerData?.attendance?.start_time) {
-                const now = new Date();
-                const start = new Date(peerData.attendance.start_time);
+        const updateTimers = () => {
+            if (!peerData?.attendance) return;
+            const att = peerData.attendance;
+            const now = new Date();
+            const totalBreak = Number(att.total_break_seconds) || 0;
+
+            if (att.is_active && att.start_time) {
+                const start = new Date(att.start_time);
                 const elapsed = Math.max(0, Math.floor((now.getTime() - start.getTime()) / 1000));
                 setLiveSeconds(elapsed);
+
+                let currentBreak = 0;
+                if (att.is_break && att.current_break_start) {
+                    currentBreak = Math.max(0, Math.floor((now.getTime() - new Date(att.current_break_start).getTime()) / 1000));
+                }
+                const accumBreak = totalBreak + currentBreak;
+                setLiveBreakSeconds(accumBreak);
+                setLiveNetSeconds(Math.max(0, elapsed - accumBreak));
+            } else {
+                setLiveSeconds(att.total_seconds || 0);
+                setLiveBreakSeconds(totalBreak);
+                setLiveNetSeconds(att.net_seconds || 0);
             }
-        }, 1000);
+        };
+
+        updateTimers();
+        const interval = setInterval(updateTimers, 1000);
         return () => clearInterval(interval);
     }, [peerData]);
+
+    const handleRemovePeer = async (peerId, peerName, e) => {
+        if (e) e.stopPropagation();
+        if (!window.confirm(`Remove ${peerName || 'this person'} from your connected list?`)) return;
+        try {
+            await API.post('/api/study/remove-peer/', { user_id: peerId });
+            if (onRefreshGroup) onRefreshGroup();
+        } catch (err) {
+            alert(err.response?.data?.error || 'Failed to remove person.');
+        }
+    };
 
     const formatTime = (totalSecs) => {
         const safeSecs = Math.max(0, Math.floor(totalSecs || 0));
@@ -78,23 +113,23 @@ export default function GroupStudyPeerPanel({
 
     const selectedPeer = peers.find(p => p.id === selectedPeerId);
 
-    // If no peers yet in group
+    // If no peers connected yet
     if (peers.length === 0) {
         return (
             <div className="card h-100 border-0 shadow-sm rounded-4 p-4 text-center d-flex flex-column justify-content-center align-items-center">
                 <div className="p-3 bg-primary bg-opacity-10 text-primary rounded-circle mb-3">
                     <i className="bi bi-people-fill fs-1"></i>
                 </div>
-                <h5 className="fw-bold mb-2">Group Study Room</h5>
-                <p className="text-muted small mb-4" style={{ maxWidth: '320px' }}>
-                    You are in room <strong className="font-monospace text-primary">{groupStatus?.group_code}</strong>. Share your study code to invite up to 9 more peers!
+                <h5 className="fw-bold mb-2">Connected Peers</h5>
+                <p className="text-muted small mb-4" style={{ maxWidth: '340px' }}>
+                    Connect with up to 10 peers by entering their study code to view their real-time attendance and tasks side-by-side!
                 </p>
                 <div className="d-flex gap-2">
                     <button className="btn btn-primary rounded-pill px-4 fw-medium" onClick={onOpenModal}>
-                        <i className="bi bi-qr-code me-1"></i> View / Share Code
+                        <i className="bi bi-person-plus me-1"></i> Connect Peer
                     </button>
                     <button className="btn btn-outline-secondary rounded-pill px-3" onClick={onCloseSplitView}>
-                        Close Split View
+                        Close Side View
                     </button>
                 </div>
             </div>
@@ -104,19 +139,19 @@ export default function GroupStudyPeerPanel({
     const completedTodos = peerData?.todos_completed || 0;
     const totalTodos = peerData?.todos_total || 0;
     const todoProgress = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
+    const targetHours = peerData?.user?.daily_target || 9.0;
+    const netHours = (liveNetSeconds / 3600);
+    const hoursProgress = Math.min(100, Math.round((netHours / targetHours) * 100));
 
     return (
-        <div className="d-flex flex-column gap-3 h-100">
+        <div className="d-flex flex-column gap-3 h-100 text-start">
             {/* Header & Peer Switcher Tabs */}
             <div className="card border-0 shadow-sm rounded-4 p-3 bg-glass">
                 <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
                     <div className="d-flex align-items-center gap-2">
-                        <span className="badge bg-primary-subtle text-primary rounded-pill px-3 py-2 fw-semibold font-monospace">
-                            <i className="bi bi-mortarboard-fill me-1"></i>
-                            Room: {groupStatus?.group_code}
-                        </span>
-                        <span className="badge bg-body-tertiary text-muted rounded-pill px-2 py-1 small border">
-                            {peers.length + 1}/10 Members
+                        <span className="badge bg-primary-subtle text-primary rounded-pill px-3 py-2 fw-semibold">
+                            <i className="bi bi-people-fill me-1"></i>
+                            Connected Peers: {peers.length}/10
                         </span>
                     </div>
 
@@ -132,12 +167,12 @@ export default function GroupStudyPeerPanel({
                             className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1"
                             onClick={onOpenModal}
                         >
-                            <i className="bi bi-person-plus me-1"></i> Invite
+                            <i className="bi bi-person-plus me-1"></i> Add Person
                         </button>
                         <button
                             className="btn btn-sm btn-outline-danger rounded-pill px-2 py-1"
                             onClick={onCloseSplitView}
-                            title="Close split screen"
+                            title="Close side view"
                         >
                             <i className="bi bi-x-lg"></i>
                         </button>
@@ -151,7 +186,8 @@ export default function GroupStudyPeerPanel({
                         return (
                             <div
                                 key={p.id}
-                                className={`peer-tab-item rounded-pill px-3 py-1 d-flex align-items-center gap-2 bg-light ${isSelected ? 'active bg-primary bg-opacity-10' : ''}`}
+                                className={`peer-tab-item rounded-pill px-3 py-1 d-flex align-items-center gap-2 bg-light position-relative ${isSelected ? 'active bg-primary bg-opacity-10 border border-primary' : 'border'}`}
+                                style={{ cursor: 'pointer', transition: 'all 0.2s ease' }}
                                 onClick={() => setSelectedPeerId(p.id)}
                             >
                                 <div className="position-relative">
@@ -171,9 +207,19 @@ export default function GroupStudyPeerPanel({
                                         }}
                                     ></span>
                                 </div>
-                                <span className="small fw-semibold text-truncate" style={{ maxWidth: '100px' }}>
+                                <span className="small fw-semibold text-truncate" style={{ maxWidth: '90px' }}>
                                     {p.first_name || p.username}
                                 </span>
+
+                                {/* Cross remove button */}
+                                <button
+                                    className="btn btn-link text-danger p-0 ms-1"
+                                    style={{ fontSize: '0.8rem', lineHeight: 1 }}
+                                    title={`Remove ${p.full_name}`}
+                                    onClick={(e) => handleRemovePeer(p.id, p.full_name, e)}
+                                >
+                                    <i className="bi bi-x"></i>
+                                </button>
                             </div>
                         );
                     })}
@@ -225,41 +271,51 @@ export default function GroupStudyPeerPanel({
                                     </span>
                                 )}
                                 <span className="text-muted" style={{ fontSize: '0.72rem' }}>
-                                    <i className="bi bi-eye me-1"></i> Read-Only View
+                                    <i className="bi bi-shield-lock me-1"></i> Read-Only View
                                 </span>
                             </div>
                         </div>
 
-                        {/* Peer Live Attendance */}
-                        <div className="p-3 bg-light rounded-4 border border-secondary-subtle text-center mb-3">
-                            <div className="text-muted small fw-semibold text-uppercase mb-1" style={{ letterSpacing: '0.05em' }}>
-                                {peerData.attendance.is_break ? "Peer's Active Break" : "Peer's Total Work Time"}
+                        {/* Live Timer Stats Display */}
+                        <div className="row g-2 text-center mb-3">
+                            <div className="col-4">
+                                <div className="p-3 bg-light rounded-4 border border-secondary-subtle h-100">
+                                    <div className="text-muted small fw-medium text-uppercase mb-1" style={{ fontSize: '0.7rem' }}>Total Time</div>
+                                    <div className="fs-5 fw-bold font-monospace text-primary">
+                                        {formatTime(liveSeconds)}
+                                    </div>
+                                </div>
                             </div>
-                            <div className="display-5 fw-bold text-primary font-monospace mb-2">
-                                {formatTime(liveSeconds)}
+                            <div className="col-4">
+                                <div className="p-3 bg-light rounded-4 border border-secondary-subtle h-100">
+                                    <div className="text-muted small fw-medium text-uppercase mb-1" style={{ fontSize: '0.7rem' }}>Break Time</div>
+                                    <div className="fs-5 fw-bold font-monospace text-warning">
+                                        {formatTime(liveBreakSeconds)}
+                                    </div>
+                                </div>
                             </div>
+                            <div className="col-4">
+                                <div className="p-3 bg-light rounded-4 border border-secondary-subtle h-100">
+                                    <div className="text-muted small fw-medium text-uppercase mb-1" style={{ fontSize: '0.7rem' }}>Net Work</div>
+                                    <div className="fs-5 fw-bold font-monospace text-success">
+                                        {formatTime(liveNetSeconds)}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                            <div className="row g-2 mt-2">
-                                <div className="col-6">
-                                    <div className="p-2 bg-warning-subtle text-warning border border-warning-subtle rounded-3 text-center">
-                                        <div className="small fw-semibold text-uppercase" style={{ fontSize: '0.7rem' }}>
-                                            <i className="bi bi-cup-hot me-1"></i> Break Time
-                                        </div>
-                                        <div className="font-monospace fw-bold small">
-                                            {formatTime(peerData.attendance.total_break_seconds)}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="col-6">
-                                    <div className="p-2 bg-success-subtle text-success border border-success-subtle rounded-3 text-center">
-                                        <div className="small fw-semibold text-uppercase" style={{ fontSize: '0.7rem' }}>
-                                            <i className="bi bi-briefcase me-1"></i> Net Work
-                                        </div>
-                                        <div className="font-monospace fw-bold small">
-                                            {formatTime(peerData.attendance.net_seconds)}
-                                        </div>
-                                    </div>
-                                </div>
+                        {/* Daily Target Progress Bar */}
+                        <div className="bg-light p-3 rounded-4 border border-secondary-subtle">
+                            <div className="d-flex justify-content-between align-items-center mb-1 small">
+                                <span className="text-muted fw-medium">Daily Target Progress</span>
+                                <span className="fw-bold font-monospace">{netHours.toFixed(1)} / {targetHours.toFixed(1)} hrs ({hoursProgress}%)</span>
+                            </div>
+                            <div className="progress rounded-pill" style={{ height: '8px' }}>
+                                <div
+                                    className="progress-bar progress-bar-striped progress-bar-animated bg-success rounded-pill"
+                                    role="progressbar"
+                                    style={{ width: `${hoursProgress}%` }}
+                                ></div>
                             </div>
                         </div>
                     </div>
@@ -267,65 +323,50 @@ export default function GroupStudyPeerPanel({
                     {/* Peer's Today's Todo List (Read-Only) */}
                     <div className="card border-0 shadow-sm rounded-4 p-4 flex-grow-1">
                         <div className="d-flex justify-content-between align-items-center mb-3">
-                            <div>
-                                <h6 className="fw-bold mb-0 text-body d-flex align-items-center gap-2">
-                                    <i className="bi bi-check2-circle text-primary"></i>
-                                    {peerData.user.first_name || peerData.user.username}'s Today's Tasks
-                                </h6>
-                                <span className="text-muted" style={{ fontSize: '0.72rem' }}>
-                                    Live synchronized (Read-only)
+                            <div className="d-flex align-items-center gap-2">
+                                <h6 className="fw-bold mb-0 text-body">Today's Todo List</h6>
+                                <span className="badge bg-secondary-subtle text-secondary rounded-pill small" style={{ fontSize: '0.7rem' }}>
+                                    Read-Only
                                 </span>
                             </div>
                             <span className="badge bg-primary rounded-pill px-3 py-1 font-monospace">
-                                {completedTodos}/{totalTodos} Done
+                                {completedTodos}/{totalTodos} Done ({todoProgress}%)
                             </span>
                         </div>
 
-                        {/* Progress Bar */}
-                        <div className="progress mb-3 rounded-pill" style={{ height: '6px' }}>
-                            <div
-                                className="progress-bar bg-success progress-bar-striped progress-bar-animated"
-                                role="progressbar"
-                                style={{ width: `${todoProgress}%` }}
-                                aria-valuenow={todoProgress}
-                                aria-valuemin="0"
-                                aria-valuemax="100"
-                            ></div>
-                        </div>
+                        {/* Tasks Progress */}
+                        {totalTodos > 0 && (
+                            <div className="progress rounded-pill mb-3" style={{ height: '6px' }}>
+                                <div
+                                    className="progress-bar bg-info rounded-pill"
+                                    role="progressbar"
+                                    style={{ width: `${todoProgress}%` }}
+                                ></div>
+                            </div>
+                        )}
 
-                        {/* Tasks list */}
-                        <div className="todo-list flex-grow-1 overflow-auto" style={{ maxHeight: '220px' }}>
-                            {peerData.todos.length === 0 ? (
+                        {/* Tasks List */}
+                        <div className="todo-list overflow-auto flex-grow-1" style={{ maxHeight: '280px' }}>
+                            {peerData.todos?.length === 0 ? (
                                 <div className="text-center text-muted py-4 small">
-                                    <i className="bi bi-card-checklist fs-3 d-block mb-2 opacity-50"></i>
-                                    No tasks added by peer for today yet.
+                                    <i className="bi bi-journal-text fs-3 mb-1 d-block opacity-50"></i>
+                                    No tasks planned by this peer for today.
                                 </div>
                             ) : (
-                                peerData.todos.map((todo) => (
+                                peerData.todos.map((t) => (
                                     <div
-                                        key={todo.id}
-                                        className="peer-todo-item d-flex align-items-center justify-content-between p-2 mb-1 rounded-3 border-bottom border-secondary-subtle"
+                                        key={t.id}
+                                        className="todo-item d-flex align-items-center justify-content-between p-2 mb-2 rounded-3 bg-light border border-secondary-subtle"
                                     >
                                         <div className="d-flex align-items-center gap-3">
-                                            <input
-                                                type="checkbox"
-                                                className="form-check-input todo-checkbox"
-                                                checked={todo.is_completed}
-                                                disabled
-                                                readOnly
-                                                style={{ cursor: 'not-allowed', opacity: 0.85 }}
-                                            />
-                                            <span
-                                                className={`todo-text ${todo.is_completed ? 'completed text-decoration-line-through text-muted' : 'text-body'}`}
-                                            >
-                                                {todo.title}
+                                            <i className={`bi ${t.is_completed ? 'bi-check-circle-fill text-success fs-5' : 'bi-circle text-muted fs-5'}`}></i>
+                                            <span className={`todo-text ${t.is_completed ? 'completed text-decoration-line-through text-muted' : 'fw-medium'}`}>
+                                                {t.title}
                                             </span>
                                         </div>
-                                        {todo.is_completed && (
-                                            <span className="badge bg-success-subtle text-success small px-2 py-1 rounded-pill" style={{ fontSize: '0.7rem' }}>
-                                                <i className="bi bi-check-lg me-1"></i> Completed
-                                            </span>
-                                        )}
+                                        <span className="badge bg-light text-muted small border">
+                                            {t.is_completed ? 'Completed' : 'Pending'}
+                                        </span>
                                     </div>
                                 ))
                             )}

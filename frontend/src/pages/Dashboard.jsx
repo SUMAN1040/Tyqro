@@ -55,6 +55,7 @@ export default function Dashboard({ user }) {
     // Group study states
     const [groupStatus, setGroupStatus] = useState({ in_group: false, members: [], count: 0, max_members: 10 });
     const [isSplitView, setIsSplitView] = useState(false);
+    const [showGroupModal, setShowGroupModal] = useState(false);
 
     // Modals & Reason Prompt states
     const [showReasonModal, setShowReasonModal] = useState(false);
@@ -754,16 +755,16 @@ export default function Dashboard({ user }) {
                     <h2 className="fw-bold mb-1">Hello, {user?.first_name || user?.username} 👋</h2>
                     <p className="text-muted mb-0" id="currentDateDisplay">Today's Date: {currentDate}</p>
                 </div>
-                {groupStatus?.in_group && (
+                {(groupStatus?.count > 0 || groupStatus?.peers?.length > 0) && (
                     <div className="col-12 col-md-5 d-flex justify-content-md-end align-items-center gap-2 mt-3 mt-md-0">
                         <button 
                             className={`btn ${isSplitView ? 'btn-primary' : 'btn-outline-primary'} rounded-pill px-3 py-2 fw-medium d-flex align-items-center gap-2 shadow-sm`}
                             onClick={() => setIsSplitView(!isSplitView)}
                         >
                             <i className="bi bi-layout-split"></i>
-                            <span>{isSplitView ? 'Solo View' : 'Group Study Split View'}</span>
+                            <span>{isSplitView ? 'Solo View' : 'Side-by-Side View'}</span>
                             <span className="badge bg-white text-dark rounded-pill px-2 font-monospace">
-                                {groupStatus.members?.length || 1}/10
+                                {groupStatus?.count || groupStatus?.peers?.length || 0}/10
                             </span>
                         </button>
                     </div>
@@ -805,10 +806,8 @@ export default function Dashboard({ user }) {
                             user={user}
                             groupStatus={groupStatus}
                             onCloseSplitView={() => setIsSplitView(false)}
-                            onOpenModal={() => {
-                                const fabBtn = document.querySelector('.group-study-fab');
-                                if (fabBtn) fabBtn.click();
-                            }}
+                            onOpenModal={() => setShowGroupModal(true)}
+                            onRefreshGroup={fetchGroupStatus}
                         />
                     </div>
                 </div>
@@ -837,6 +836,9 @@ export default function Dashboard({ user }) {
                 onRefreshGroup={fetchGroupStatus}
                 isSplitView={isSplitView}
                 onToggleSplitView={setIsSplitView}
+                isOpen={showGroupModal}
+                onOpen={() => setShowGroupModal(true)}
+                onClose={() => setShowGroupModal(false)}
             />
 
             {/* Confirm Start Modal */}

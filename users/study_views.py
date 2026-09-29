@@ -7,7 +7,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import UserProfile, StudyGroup, StudyGroupMembership
+from .models import UserProfile, PeerConnection
 from attendance.models import Attendance
 from attendance.views import auto_close_previous_sessions
 from todos.models import Todo
@@ -16,21 +16,10 @@ from todos.models import Todo
 @permission_classes([IsAuthenticated])
 def get_study_code(request):
     """
-    Get or create the user's lifetime study code and ensure their host StudyGroup exists.
+    Get or create the user's permanent lifetime study code.
     """
     profile = request.user.profile
     code = profile.get_or_create_study_code()
-    
-    # Ensure creator has a StudyGroup with this code
-    group, _ = StudyGroup.objects.get_or_create(creator=request.user, defaults={'code': code})
-    if group.code != code:
-        group.code = code
-        group.save(update_fields=['code'])
-        
-    # Ensure user is in their own group membership if not in any other group
-    has_membership = StudyGroupMembership.objects.filter(user=request.user).exists()
-    if not has_membership:
-        StudyGroupMembership.objects.get_or_create(group=group, user=request.user)
 
     return Response({
         'status': 'success',
@@ -42,40 +31,39 @@ def get_study_code(request):
 @transaction.atomic
 def join_study_group(request):
     """
-    Join a study group using a shared lifetime study code. Up to 10 members allowed.
+    Connect with a peer using their permanent study code. Can connect up to 10 people.
     """
     code = request.data.get('code', '').strip().upper()
     if not code:
         return Response({'error': 'Please enter a valid study code.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Find the user or group with this code
+    # Find the user with this code
     target_profile = UserProfile.objects.filter(study_code=code).select_related('user').first()
     if not target_profile:
-        return Response({'error': 'Invalid study code. No study group found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'error': 'Invalid study code. No user found with this code.'}, status=status.HTTP_404_NOT_FOUND)
 
-    owner = target_profile.user
-    group, _ = StudyGroup.objects.get_or_create(creator=owner, defaults={'code': code})
-    
-    # Check max limit of 10 members
-    current_count = group.memberships.count()
-    is_already_member = group.memberships.filter(user=request.user).exists()
-    
-    if not is_already_member and current_count >= 10:
-        return Response({'error': 'This study group is full (maximum 10 members allowed).'}, status=status.HTTP_400_BAD_REQUEST)
+    target_user = target_profile.user
+    if target_user.id == request.user.id:
+        return Response({'error': 'You cannot connect with your own code.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Remove user from any other group first
-    StudyGroupMembership.objects.filter(user=request.user).exclude(group=group).delete()
-    
-    # Also ensure the owner is added to memberships
-    StudyGroupMembership.objects.get_or_create(group=group, user=owner)
+    # Check if already connected
+    if PeerConnection.objects.filter(user=request.user, peer=target_user).exists():
+        return Response({'error': f'You are already connected with {target_user.first_name or target_user.username}.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Add current user
-    StudyGroupMembership.objects.get_or_create(group=group, user=request.user)
+    # Check maximum limit of 10 peers
+    current_count = PeerConnection.objects.filter(user=request.user).count()
+    if current_count >= 10:
+        return Response({'error': 'You have reached the maximum limit of 10 connected people. Please remove someone to add a new person.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Create connection
+    PeerConnection.objects.create(user=request.user, peer=target_user)
+
+    target_name = f"{target_user.first_name} {target_user.last_name}".strip() or target_user.username
 
     return Response({
         'status': 'success',
-        'message': f'Successfully joined {owner.first_name or owner.username}\'s study group!',
-        'group_code': code
+        'message': f'Successfully connected with {target_name}!',
+        'peer_id': target_user.id
     })
 
 @api_view(['GET'])
@@ -83,26 +71,15 @@ def join_study_group(request):
 @transaction.atomic
 def get_group_status(request):
     """
-    Get current user's active study group and all member details (up to 10).
+    Get current user's connected peers and live activity status (up to 10).
     """
-    membership = StudyGroupMembership.objects.filter(user=request.user).select_related('group', 'group__creator').first()
-    
-    if not membership:
-        return Response({
-            'in_group': False,
-            'members': [],
-            'count': 0,
-            'max_members': 10
-        })
-
-    group = membership.group
-    memberships = group.memberships.select_related('user', 'user__profile').all().order_by('joined_at')
+    connections = PeerConnection.objects.filter(user=request.user).select_related('peer', 'peer__profile').order_by('-created_at')
     
     today = timezone.now().date()
-    members_data = []
+    peers_data = []
 
-    for m in memberships:
-        u = m.user
+    for conn in connections:
+        u = conn.peer
         p = getattr(u, 'profile', None)
         avatar_url = None
         if p and p.avatar:
@@ -122,69 +99,58 @@ def get_group_status(request):
         total_todos = todos_qs.count()
         completed_todos = todos_qs.filter(is_completed=True).count()
 
-        members_data.append({
+        peers_data.append({
             'id': u.id,
             'username': u.username,
             'first_name': u.first_name,
             'last_name': u.last_name,
             'full_name': f"{u.first_name} {u.last_name}".strip() or u.username,
             'avatar_url': avatar_url,
-            'is_creator': (u.id == group.creator_id),
-            'is_self': (u.id == request.user.id),
+            'is_self': False,
             'is_active': is_active,
             'is_break': is_break,
             'has_ended': has_ended,
             'total_todos': total_todos,
             'completed_todos': completed_todos,
-            'joined_at': m.joined_at.isoformat(),
+            'connected_at': conn.created_at.isoformat(),
         })
 
+    my_code = request.user.profile.get_or_create_study_code()
+
     return Response({
-        'in_group': True,
-        'group_code': group.code,
-        'is_creator': (request.user.id == group.creator_id),
-        'creator_name': group.creator.get_full_name() or group.creator.username,
-        'members': members_data,
-        'count': len(members_data),
+        'in_group': bool(len(peers_data) > 0),
+        'connected_count': len(peers_data),
+        'count': len(peers_data),
         'max_members': 10,
+        'members': peers_data,
+        'peers': peers_data,
+        'my_code': my_code
     })
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def leave_study_group(request):
     """
-    Leave current study group.
+    Remove all connected peers.
     """
-    membership = StudyGroupMembership.objects.filter(user=request.user).first()
-    if membership:
-        membership.delete()
-        
-    return Response({'status': 'success', 'message': 'Left study group successfully.'})
+    PeerConnection.objects.filter(user=request.user).delete()
+    return Response({'status': 'success', 'message': 'All connected peers removed.'})
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def remove_group_member(request):
     """
-    Remove a member from the study group (creator only or self).
+    Remove a specific person from the user's connected list.
     """
-    target_user_id = request.data.get('user_id')
+    target_user_id = request.data.get('user_id') or request.data.get('peer_id')
     if not target_user_id:
         return Response({'error': 'User ID required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    membership = StudyGroupMembership.objects.filter(user=request.user).select_related('group').first()
-    if not membership:
-        return Response({'error': 'You are not in a group.'}, status=status.HTTP_400_BAD_REQUEST)
-
-    group = membership.group
-    # Check permissions
-    if group.creator_id != request.user.id and int(target_user_id) != request.user.id:
-        return Response({'error': 'Only group host can remove other members.'}, status=status.HTTP_403_FORBIDDEN)
-
-    target_membership = StudyGroupMembership.objects.filter(group=group, user_id=target_user_id).first()
-    if target_membership:
-        target_membership.delete()
-
-    return Response({'status': 'success', 'message': 'Member removed.'})
+    deleted_count, _ = PeerConnection.objects.filter(user=request.user, peer_id=target_user_id).delete()
+    if deleted_count > 0:
+        return Response({'status': 'success', 'message': 'Person removed from connected list.'})
+    else:
+        return Response({'error': 'Person not found in your connected list.'}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -194,13 +160,11 @@ def get_peer_data(request, peer_id):
     Fetch specified peer's live work attendance and todo list for today.
     Read-only view for group study.
     """
-    # Verify both users are in the same active group
-    user_group_ids = set(StudyGroupMembership.objects.filter(user=request.user).values_list('group_id', flat=True))
-    peer_group_ids = set(StudyGroupMembership.objects.filter(user_id=peer_id).values_list('group_id', flat=True))
+    # Verify user is connected with this peer (or self)
+    is_connected = PeerConnection.objects.filter(user=request.user, peer_id=peer_id).exists() or (request.user.id == int(peer_id))
     
-    # Allow self or shared group
-    if request.user.id != int(peer_id) and not (user_group_ids & peer_group_ids):
-        return Response({'error': 'You do not share a study group with this member.'}, status=status.HTTP_403_FORBIDDEN)
+    if not is_connected:
+        return Response({'error': 'You are not connected with this person.'}, status=status.HTTP_403_FORBIDDEN)
 
     peer_user = get_object_or_404(User, id=peer_id)
     auto_close_previous_sessions(peer_user)

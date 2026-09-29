@@ -16,7 +16,14 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from .serializers import UserSerializer, UserProfileSerializer
 
 def send_email_async(email_message):
-    thread = threading.Thread(target=email_message.send)
+    def _send():
+        try:
+            email_message.send()
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).exception("Failed to send email: %s", e)
+    thread = threading.Thread(target=_send)
+    thread.daemon = True
     thread.start()
 
 @api_view(['POST'])
@@ -35,29 +42,37 @@ def signup_view(request):
     if password != password_confirm:
         return Response({'error': "Passwords don't match."}, status=status.HTTP_400_BAD_REQUEST)
 
-    if User.objects.filter(email__iexact=email).exists():
-        existing_user = User.objects.get(email__iexact=email)
-        if existing_user.is_active:
-            return Response({'error': 'This email address is already in use.'}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            existing_user.delete()
+    active_exists = (
+        User.objects.filter(email__iexact=email, is_active=True).exists() or
+        User.objects.filter(username__iexact=email[:150], is_active=True).exists()
+    )
+    if active_exists:
+        return Response({'error': 'This email address is already registered. Please sign in.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Clean up any unverified/inactive accounts with this email or username
+    User.objects.filter(email__iexact=email, is_active=False).delete()
+    User.objects.filter(username__iexact=email[:150], is_active=False).delete()
 
     try:
         validate_password(password)
     except ValidationError as e:
         return Response({'error': e.messages[0]}, status=status.HTTP_400_BAD_REQUEST)
 
-    user = User.objects.create_user(
-        username=email[:150],
-        email=email,
-        password=password,
-        first_name=first_name,
-        last_name=last_name,
-        is_active=False
-    )
+    try:
+        user = User.objects.create_user(
+            username=email[:150],
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            is_active=False
+        )
+    except Exception as e:
+        return Response({'error': f'Failed to create account: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
 
     otp = str(random.randint(100000, 999999))
-    profile = user.profile
+    from .models import UserProfile
+    profile, _ = UserProfile.objects.get_or_create(user=user)
     profile.otp_code = otp
     profile.otp_purpose = 'signup'
     profile.save()

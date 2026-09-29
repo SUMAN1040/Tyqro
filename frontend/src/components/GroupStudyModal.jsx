@@ -6,21 +6,43 @@ export default function GroupStudyModal({
     groupStatus, 
     onRefreshGroup, 
     isSplitView, 
-    onToggleSplitView 
+    onToggleSplitView,
+    isOpen: externalIsOpen,
+    onClose: externalOnClose,
+    onOpen: externalOnOpen,
+    initialTab
 }) {
-    const [isOpen, setIsOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState('get_code'); // 'get_code', 'enter_code', 'members'
+    const [internalOpen, setInternalOpen] = useState(false);
+    const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalOpen;
+    const handleSetOpen = (val) => {
+        if (val) {
+            setInternalOpen(true);
+            if (externalOnOpen) externalOnOpen();
+        } else {
+            setInternalOpen(false);
+            if (externalOnClose) externalOnClose();
+        }
+    };
+
+    const peers = groupStatus?.peers || groupStatus?.members || [];
+    const [activeTab, setActiveTab] = useState(initialTab || (peers.length > 0 ? 'peers' : 'get_code'));
     
     // Get Code tab states
-    const [myCode, setMyCode] = useState(user?.profile?.study_code || '');
+    const [myCode, setMyCode] = useState(user?.profile?.study_code || groupStatus?.my_code || '');
     const [codeLoading, setCodeLoading] = useState(false);
     const [copySuccess, setCopySuccess] = useState(false);
     
     // Enter Code tab states
     const [enterCodeInput, setEnterCodeInput] = useState('');
-    const [joinLoading, setJoinLoading] = useState(false);
-    const [joinError, setJoinError] = useState('');
-    const [joinSuccess, setJoinSuccess] = useState('');
+    const [connectLoading, setConnectLoading] = useState(false);
+    const [connectError, setConnectError] = useState('');
+    const [connectSuccess, setConnectSuccess] = useState('');
+
+    useEffect(() => {
+        if (initialTab) {
+            setActiveTab(initialTab);
+        }
+    }, [initialTab]);
 
     // Fetch or generate lifetime study code
     const fetchMyCode = async () => {
@@ -28,7 +50,7 @@ export default function GroupStudyModal({
         try {
             const res = await API.get('/api/study/code/');
             setMyCode(res.data.study_code);
-            onRefreshGroup();
+            if (onRefreshGroup) onRefreshGroup();
         } catch (err) {
             console.error('Failed to get study code:', err);
         } finally {
@@ -50,70 +72,57 @@ export default function GroupStudyModal({
         setTimeout(() => setCopySuccess(false), 2500);
     };
 
-    // Join Group with code
-    const handleJoinGroup = async (e) => {
+    // Connect with peer using their code
+    const handleConnectPeer = async (e) => {
         e.preventDefault();
-        setJoinError('');
-        setJoinSuccess('');
+        setConnectError('');
+        setConnectSuccess('');
         const trimmed = enterCodeInput.trim().toUpperCase();
         if (!trimmed) {
-            setJoinError('Please enter a study code.');
+            setConnectError('Please enter a study code.');
             return;
         }
 
-        setJoinLoading(true);
+        setConnectLoading(true);
         try {
-            const res = await API.post('/api/study/join/', { code: trimmed });
-            setJoinSuccess(res.data.message || 'Joined group successfully!');
+            const res = await API.post('/api/study/connect/', { code: trimmed });
+            setConnectSuccess(res.data.message || 'Connected successfully!');
             setEnterCodeInput('');
-            onRefreshGroup();
-            if (!isSplitView) {
+            if (onRefreshGroup) onRefreshGroup();
+            if (!isSplitView && onToggleSplitView) {
                 onToggleSplitView(true);
             }
-            setActiveTab('members');
+            setActiveTab('peers');
         } catch (err) {
-            setJoinError(err.response?.data?.error || err.response?.data?.message || 'Failed to join group.');
+            setConnectError(err.response?.data?.error || err.response?.data?.message || 'Failed to connect with peer.');
         } finally {
-            setJoinLoading(false);
+            setConnectLoading(false);
         }
     };
 
-    // Leave Group
-    const handleLeaveGroup = async () => {
-        if (!window.confirm('Are you sure you want to leave this study group?')) return;
+    // Remove connected peer with cross (X)
+    const handleRemovePeer = async (peerId, peerName) => {
+        if (!window.confirm(`Remove ${peerName || 'this person'} from your connected list?`)) return;
         try {
-            await API.post('/api/study/leave/');
-            onRefreshGroup();
-            if (isSplitView) {
-                onToggleSplitView(false);
-            }
-            setActiveTab('get_code');
+            await API.post('/api/study/remove-peer/', { user_id: peerId });
+            if (onRefreshGroup) onRefreshGroup();
         } catch (err) {
-            alert('Failed to leave study group.');
+            alert(err.response?.data?.error || 'Failed to remove person.');
         }
     };
 
-    // Remove member (Host only)
-    const handleRemoveMember = async (memberId) => {
-        if (!window.confirm('Remove this member from the study group?')) return;
-        try {
-            await API.post('/api/study/remove-member/', { user_id: memberId });
-            onRefreshGroup();
-        } catch (err) {
-            alert('Failed to remove member.');
-        }
-    };
-
-    const inGroup = Boolean(groupStatus?.in_group && groupStatus?.members?.length > 1);
-    const memberCount = groupStatus?.members?.length || (groupStatus?.in_group ? 1 : 0);
+    const connectedCount = peers.length;
 
     return (
         <>
             {/* Floating Action Button in Bottom Right Corner */}
             <button
                 className="btn btn-primary rounded-pill group-study-fab d-flex align-items-center gap-2 py-2 px-3 fw-semibold border-0"
-                onClick={() => setIsOpen(true)}
-                title="Group Study Room"
+                onClick={() => {
+                    handleSetOpen(true);
+                    if (peers.length > 0) setActiveTab('peers');
+                }}
+                title="Group Study Peers"
                 style={{
                     background: 'linear-gradient(135deg, #5e6ad2 0%, #4facfe 100%)',
                     zIndex: 1040
@@ -121,21 +130,21 @@ export default function GroupStudyModal({
             >
                 <i className="bi bi-people-fill fs-5"></i>
                 <span className="d-none d-sm-inline">Group Study</span>
-                {inGroup && (
+                {connectedCount > 0 && (
                     <span className="badge bg-white text-dark rounded-pill px-2 py-1 shadow-sm font-monospace" style={{ fontSize: '0.75rem' }}>
                         <span className="pulse-dot me-1"></span>
-                        {memberCount}/10
+                        {connectedCount}/10
                     </span>
                 )}
             </button>
 
             {/* Modal Backdrop & Dialog */}
             {isOpen && (
-                <div className="modal-backdrop fade show" style={{ zIndex: 1050 }} onClick={() => setIsOpen(false)}></div>
+                <div className="modal-backdrop fade show" style={{ zIndex: 1050 }} onClick={() => handleSetOpen(false)}></div>
             )}
 
             {isOpen && (
-                <div className="modal fade show d-block" style={{ zIndex: 1055 }} tabIndex="-1" onClick={(e) => { if (e.target === e.currentTarget) setIsOpen(false); }}>
+                <div className="modal fade show d-block" style={{ zIndex: 1055 }} tabIndex="-1">
                     <div className="modal-dialog modal-dialog-centered">
                         <div className="modal-content border-0 shadow-lg rounded-4 overflow-hidden text-start">
                             {/* Header */}
@@ -145,11 +154,11 @@ export default function GroupStudyModal({
                                         <div className="p-2 rounded-3 text-white" style={{ background: 'linear-gradient(135deg, #5e6ad2 0%, #4facfe 100%)' }}>
                                             <i className="bi bi-mortarboard-fill"></i>
                                         </div>
-                                        Group Study Room
+                                        Group Study
                                     </h5>
-                                    <p className="text-muted small mb-0 mt-1">Study and track live attendance with peers (up to 10 members)</p>
+                                    <p className="text-muted small mb-0 mt-1">Connect with peers to track live attendance & tasks (up to 10 people)</p>
                                 </div>
-                                <button type="button" className="btn-close" onClick={() => setIsOpen(false)}></button>
+                                <button type="button" className="btn-close" onClick={() => handleSetOpen(false)}></button>
                             </div>
 
                             {/* Nav Tabs */}
@@ -158,7 +167,7 @@ export default function GroupStudyModal({
                                     <li className="nav-item">
                                         <button 
                                             className={`nav-link rounded-pill btn-sm px-3 py-1 fw-medium ${activeTab === 'get_code' ? 'active' : 'text-body bg-transparent'}`}
-                                            onClick={() => { setActiveTab('get_code'); setJoinError(''); setJoinSuccess(''); }}
+                                            onClick={() => { setActiveTab('get_code'); setConnectError(''); setConnectSuccess(''); }}
                                         >
                                             <i className="bi bi-qr-code me-1"></i> Get Code
                                         </button>
@@ -166,21 +175,19 @@ export default function GroupStudyModal({
                                     <li className="nav-item">
                                         <button 
                                             className={`nav-link rounded-pill btn-sm px-3 py-1 fw-medium ${activeTab === 'enter_code' ? 'active' : 'text-body bg-transparent'}`}
-                                            onClick={() => { setActiveTab('enter_code'); setJoinError(''); setJoinSuccess(''); }}
+                                            onClick={() => { setActiveTab('enter_code'); setConnectError(''); setConnectSuccess(''); }}
                                         >
-                                            <i className="bi bi-box-arrow-in-right me-1"></i> Enter Code
+                                            <i className="bi bi-person-plus me-1"></i> Enter Code
                                         </button>
                                     </li>
-                                    {groupStatus?.in_group && (
-                                        <li className="nav-item">
-                                            <button 
-                                                className={`nav-link rounded-pill btn-sm px-3 py-1 fw-medium ${activeTab === 'members' ? 'active' : 'text-body bg-transparent'}`}
-                                                onClick={() => { setActiveTab('members'); setJoinError(''); setJoinSuccess(''); }}
-                                            >
-                                                <i className="bi bi-people me-1"></i> Group ({memberCount}/10)
-                                            </button>
-                                        </li>
-                                    )}
+                                    <li className="nav-item">
+                                        <button 
+                                            className={`nav-link rounded-pill btn-sm px-3 py-1 fw-medium ${activeTab === 'peers' ? 'active' : 'text-body bg-transparent'}`}
+                                            onClick={() => { setActiveTab('peers'); setConnectError(''); setConnectSuccess(''); }}
+                                        >
+                                            <i className="bi bi-people me-1"></i> Connected ({connectedCount}/10)
+                                        </button>
+                                    </li>
                                 </ul>
                             </div>
 
@@ -215,20 +222,20 @@ export default function GroupStudyModal({
 
                                         <p className="text-muted small px-3 mt-3 mb-4">
                                             <i className="bi bi-info-circle me-1 text-primary"></i>
-                                            This is your single lifetime study code. Share this code with your friends or study group members. When they enter it, they will join your shared study session!
+                                            Share this lifetime code with your friends or study peers. When they enter your code, you will connect to each other's dashboards!
                                         </p>
 
-                                        {groupStatus?.in_group && (
+                                        {connectedCount > 0 && (
                                             <div className="d-flex justify-content-center gap-2">
                                                 <button 
                                                     className={`btn ${isSplitView ? 'btn-outline-primary' : 'btn-primary'} rounded-pill px-4 fw-medium`}
                                                     onClick={() => {
-                                                        onToggleSplitView(!isSplitView);
-                                                        setIsOpen(false);
+                                                        if (onToggleSplitView) onToggleSplitView(!isSplitView);
+                                                        handleSetOpen(false);
                                                     }}
                                                 >
                                                     <i className="bi bi-layout-split me-1"></i>
-                                                    {isSplitView ? 'Hide Group Split View' : 'Open Group Split View'}
+                                                    {isSplitView ? 'Hide Side-by-Side View' : 'Open Side-by-Side View'}
                                                 </button>
                                             </div>
                                         )}
@@ -239,22 +246,22 @@ export default function GroupStudyModal({
                                 {activeTab === 'enter_code' && (
                                     <div className="py-2">
                                         <p className="text-muted small mb-3">
-                                            Enter the permanent study code shared by your friend or study host to join their group room (Up to 10 peers).
+                                            Enter the permanent study code of the person you want to connect with (Add up to 10 people).
                                         </p>
 
-                                        {joinError && (
+                                        {connectError && (
                                             <div className="alert alert-danger bg-danger bg-opacity-10 text-danger border-0 small py-2 text-center mb-3">
-                                                {joinError}
+                                                {connectError}
                                             </div>
                                         )}
 
-                                        {joinSuccess && (
+                                        {connectSuccess && (
                                             <div className="alert alert-success bg-success bg-opacity-10 text-success border-0 small py-2 text-center mb-3">
-                                                {joinSuccess}
+                                                {connectSuccess}
                                             </div>
                                         )}
 
-                                        <form onSubmit={handleJoinGroup}>
+                                        <form onSubmit={handleConnectPeer}>
                                             <div className="input-group mb-3">
                                                 <span className="input-group-text bg-light border-0 px-3">
                                                     <i className="bi bi-key text-muted"></i>
@@ -266,7 +273,7 @@ export default function GroupStudyModal({
                                                     value={enterCodeInput}
                                                     onChange={(e) => setEnterCodeInput(e.target.value.toUpperCase())}
                                                     maxLength={12}
-                                                    disabled={joinLoading}
+                                                    disabled={connectLoading}
                                                     autoFocus
                                                 />
                                             </div>
@@ -274,14 +281,14 @@ export default function GroupStudyModal({
                                             <button 
                                                 type="submit" 
                                                 className="btn btn-primary w-100 py-2 rounded-pill fw-semibold shadow-sm d-flex align-items-center justify-content-center gap-2"
-                                                disabled={joinLoading || !enterCodeInput.trim()}
+                                                disabled={connectLoading || !enterCodeInput.trim()}
                                             >
-                                                {joinLoading ? (
+                                                {connectLoading ? (
                                                     <span className="spinner-border spinner-border-sm" role="status"></span>
                                                 ) : (
                                                     <>
                                                         <i className="bi bi-person-plus-fill"></i>
-                                                        Join Study Group
+                                                        Connect Person
                                                     </>
                                                 )}
                                             </button>
@@ -289,94 +296,105 @@ export default function GroupStudyModal({
                                     </div>
                                 )}
 
-                                {/* TAB 3: GROUP MEMBERS */}
-                                {activeTab === 'members' && groupStatus?.in_group && (
+                                {/* TAB 3: CONNECTED PEOPLE */}
+                                {activeTab === 'peers' && (
                                     <div>
                                         <div className="d-flex justify-content-between align-items-center mb-3">
                                             <div>
-                                                <span className="fw-bold small text-uppercase text-muted">Group Code:</span>
-                                                <span className="font-monospace fw-bold ms-2 text-primary">{groupStatus.group_code}</span>
+                                                <span className="fw-bold small text-uppercase text-muted">Connected People</span>
                                             </div>
                                             <span className="badge bg-primary rounded-pill px-3 py-2 font-monospace">
-                                                {memberCount} / 10 Members
+                                                {connectedCount} / 10 Connected
                                             </span>
                                         </div>
 
-                                        <div className="list-group list-group-flush mb-4 overflow-auto" style={{ maxHeight: '220px' }}>
-                                            {groupStatus.members?.map((m) => (
-                                                <div key={m.id} className="list-group-item px-0 py-2 d-flex align-items-center justify-content-between border-secondary-subtle">
-                                                    <div className="d-flex align-items-center gap-3">
-                                                        <div className="position-relative">
-                                                            {m.avatar_url ? (
-                                                                <img src={m.avatar_url} alt={m.full_name} className="rounded-circle" style={{ width: '36px', height: '36px', objectFit: 'cover' }} />
-                                                            ) : (
-                                                                <div className="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center fw-bold" style={{ width: '36px', height: '36px', fontSize: '0.85rem' }}>
-                                                                    {(m.first_name?.[0] || m.username?.[0] || 'U').toUpperCase()}
-                                                                </div>
-                                                            )}
-                                                            <span 
-                                                                className="position-absolute bottom-0 end-0 rounded-circle border border-2 border-white"
-                                                                style={{ 
-                                                                    width: '10px', 
-                                                                    height: '10px', 
-                                                                    backgroundColor: m.is_active ? '#198754' : m.is_break ? '#ffc107' : '#adb5bd' 
-                                                                }}
-                                                            ></span>
-                                                        </div>
-                                                        <div>
-                                                            <div className="fw-bold small mb-0 d-flex align-items-center gap-2">
-                                                                {m.full_name}
-                                                                {m.is_self && <span className="badge bg-secondary-subtle text-secondary small">You</span>}
-                                                                {m.is_creator && <span className="badge bg-primary-subtle text-primary small">Host</span>}
-                                                            </div>
-                                                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>
-                                                                {m.is_active ? (
-                                                                    <span className="text-success"><i className="bi bi-play-circle-fill me-1"></i>Working</span>
-                                                                ) : m.is_break ? (
-                                                                    <span className="text-warning"><i className="bi bi-pause-circle-fill me-1"></i>On Break</span>
-                                                                ) : m.has_ended ? (
-                                                                    <span className="text-secondary"><i className="bi bi-check-circle me-1"></i>Shift Ended</span>
+                                        {connectedCount === 0 ? (
+                                            <div className="text-center py-4 text-muted">
+                                                <i className="bi bi-people fs-2 mb-2 d-block opacity-50"></i>
+                                                <p className="small mb-3">No connected people yet. Enter a code to connect with friends!</p>
+                                                <button 
+                                                    className="btn btn-sm btn-outline-primary rounded-pill px-3"
+                                                    onClick={() => setActiveTab('enter_code')}
+                                                >
+                                                    <i className="bi bi-person-plus me-1"></i> Add Person
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="list-group list-group-flush mb-4 overflow-auto" style={{ maxHeight: '240px' }}>
+                                                {peers.map((m) => (
+                                                    <div key={m.id} className="list-group-item px-2 py-2 d-flex align-items-center justify-content-between border-secondary-subtle">
+                                                        <div className="d-flex align-items-center gap-3">
+                                                            <div className="position-relative">
+                                                                {m.avatar_url ? (
+                                                                    <img src={m.avatar_url} alt={m.full_name} className="rounded-circle" style={{ width: '36px', height: '36px', objectFit: 'cover' }} />
                                                                 ) : (
-                                                                    <span className="text-muted">Offline</span>
+                                                                    <div className="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center fw-bold" style={{ width: '36px', height: '36px', fontSize: '0.85rem' }}>
+                                                                        {(m.first_name?.[0] || m.username?.[0] || 'U').toUpperCase()}
+                                                                    </div>
                                                                 )}
-                                                                <span className="mx-1">•</span>
-                                                                <span>Tasks: {m.completed_todos}/{m.total_todos}</span>
+                                                                <span 
+                                                                    className="position-absolute bottom-0 end-0 rounded-circle border border-2 border-white"
+                                                                    style={{ 
+                                                                        width: '10px', 
+                                                                        height: '10px', 
+                                                                        backgroundColor: m.is_active ? '#198754' : m.is_break ? '#ffc107' : '#adb5bd' 
+                                                                    }}
+                                                                ></span>
+                                                            </div>
+                                                            <div>
+                                                                <div className="fw-bold small mb-0 d-flex align-items-center gap-2">
+                                                                    {m.full_name}
+                                                                </div>
+                                                                <div className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                                                    {m.is_active ? (
+                                                                        <span className="text-success"><i className="bi bi-play-circle-fill me-1"></i>Working</span>
+                                                                    ) : m.is_break ? (
+                                                                        <span className="text-warning"><i className="bi bi-pause-circle-fill me-1"></i>On Break</span>
+                                                                    ) : m.has_ended ? (
+                                                                        <span className="text-secondary"><i className="bi bi-check-circle me-1"></i>Shift Ended</span>
+                                                                    ) : (
+                                                                        <span className="text-muted">Offline</span>
+                                                                    )}
+                                                                    <span className="mx-1">•</span>
+                                                                    <span>Tasks: {m.completed_todos}/{m.total_todos}</span>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
 
-                                                    {(groupStatus.is_creator && !m.is_self) && (
+                                                        {/* Cross button to remove person */}
                                                         <button 
-                                                            className="btn btn-link text-danger p-0 ms-2"
-                                                            title="Remove member"
-                                                            onClick={() => handleRemoveMember(m.id)}
+                                                            className="btn btn-link text-danger p-1 ms-2"
+                                                            title={`Remove ${m.full_name}`}
+                                                            onClick={() => handleRemovePeer(m.id, m.full_name)}
                                                         >
                                                             <i className="bi bi-x-circle fs-5"></i>
                                                         </button>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
 
-                                        <div className="d-flex gap-2">
-                                            <button 
-                                                className={`btn ${isSplitView ? 'btn-outline-primary' : 'btn-primary'} flex-grow-1 rounded-pill py-2 fw-medium`}
-                                                onClick={() => {
-                                                    onToggleSplitView(!isSplitView);
-                                                    setIsOpen(false);
-                                                }}
-                                            >
-                                                <i className="bi bi-layout-split me-1"></i>
-                                                {isSplitView ? 'Close Split View' : 'Open Side-by-Side View'}
-                                            </button>
-                                            <button 
-                                                className="btn btn-outline-danger rounded-pill px-3 py-2 fw-medium"
-                                                onClick={handleLeaveGroup}
-                                                title="Leave Group"
-                                            >
-                                                <i className="bi bi-box-arrow-right me-1"></i> Leave
-                                            </button>
-                                        </div>
+                                        {connectedCount > 0 && (
+                                            <div className="d-flex gap-2">
+                                                <button 
+                                                    className={`btn ${isSplitView ? 'btn-outline-primary' : 'btn-primary'} flex-grow-1 rounded-pill py-2 fw-medium`}
+                                                    onClick={() => {
+                                                        if (onToggleSplitView) onToggleSplitView(!isSplitView);
+                                                        handleSetOpen(false);
+                                                    }}
+                                                >
+                                                    <i className="bi bi-layout-split me-1"></i>
+                                                    {isSplitView ? 'Close Side-by-Side View' : 'Open Side-by-Side View'}
+                                                </button>
+                                                <button 
+                                                    className="btn btn-outline-secondary rounded-pill px-3 py-2 fw-medium"
+                                                    onClick={() => setActiveTab('enter_code')}
+                                                    title="Add Another Person"
+                                                >
+                                                    <i className="bi bi-person-plus me-1"></i> Add
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
