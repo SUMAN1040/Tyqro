@@ -80,6 +80,7 @@ def join_study_group(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@transaction.atomic
 def get_group_status(request):
     """
     Get current user's active study group and all member details (up to 10).
@@ -187,6 +188,7 @@ def remove_group_member(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@transaction.atomic
 def get_peer_data(request, peer_id):
     """
     Fetch specified peer's live work attendance and todo list for today.
