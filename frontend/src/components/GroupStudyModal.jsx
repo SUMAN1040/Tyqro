@@ -135,7 +135,7 @@ export default function GroupStudyModal({
             )}
 
             {isOpen && (
-                <div className="modal fade show d-block" style={{ zIndex: 1055 }} tabIndex="-1">
+                <div className="modal fade show d-block" style={{ zIndex: 1055 }} tabIndex="-1" onClick={(e) => { if (e.target === e.currentTarget) setIsOpen(false); }}>
                     <div className="modal-dialog modal-dialog-centered">
                         <div className="modal-content border-0 shadow-lg rounded-4 overflow-hidden text-start">
                             {/* Header */}

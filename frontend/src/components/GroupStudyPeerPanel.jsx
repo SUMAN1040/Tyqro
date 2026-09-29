@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { API } from '../api';
 
-export default function GroupStudyPeerPanel({ 
-    user, 
-    groupStatus, 
+export default function GroupStudyPeerPanel({
+    user,
+    groupStatus,
     onCloseSplitView,
     onOpenModal
 }) {
@@ -121,20 +121,20 @@ export default function GroupStudyPeerPanel({
                     </div>
 
                     <div className="d-flex align-items-center gap-2">
-                        <button 
+                        <button
                             className="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1"
                             onClick={() => fetchPeerData(selectedPeerId, true)}
                             title="Refresh peer status"
                         >
                             <i className="bi bi-arrow-clockwise"></i>
                         </button>
-                        <button 
+                        <button
                             className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1"
                             onClick={onOpenModal}
                         >
                             <i className="bi bi-person-plus me-1"></i> Invite
                         </button>
-                        <button 
+                        <button
                             className="btn btn-sm btn-outline-danger rounded-pill px-2 py-1"
                             onClick={onCloseSplitView}
                             title="Close split screen"
@@ -162,12 +162,12 @@ export default function GroupStudyPeerPanel({
                                             {(p.first_name?.[0] || p.username?.[0] || 'U').toUpperCase()}
                                         </div>
                                     )}
-                                    <span 
+                                    <span
                                         className="position-absolute bottom-0 end-0 rounded-circle border border-1 border-white"
-                                        style={{ 
-                                            width: '7px', 
-                                            height: '7px', 
-                                            backgroundColor: p.is_active ? '#198754' : p.is_break ? '#ffc107' : '#adb5bd' 
+                                        style={{
+                                            width: '7px',
+                                            height: '7px',
+                                            backgroundColor: p.is_active ? '#198754' : p.is_break ? '#ffc107' : '#adb5bd'
                                         }}
                                     ></span>
                                 </div>
@@ -283,12 +283,12 @@ export default function GroupStudyPeerPanel({
 
                         {/* Progress Bar */}
                         <div className="progress mb-3 rounded-pill" style={{ height: '6px' }}>
-                            <div 
-                                className="progress-bar bg-success progress-bar-striped progress-bar-animated" 
-                                role="progressbar" 
+                            <div
+                                className="progress-bar bg-success progress-bar-striped progress-bar-animated"
+                                role="progressbar"
                                 style={{ width: `${todoProgress}%` }}
-                                aria-valuenow={todoProgress} 
-                                aria-valuemin="0" 
+                                aria-valuenow={todoProgress}
+                                aria-valuemin="0"
                                 aria-valuemax="100"
                             ></div>
                         </div>
@@ -302,8 +302,8 @@ export default function GroupStudyPeerPanel({
                                 </div>
                             ) : (
                                 peerData.todos.map((todo) => (
-                                    <div 
-                                        key={todo.id} 
+                                    <div
+                                        key={todo.id}
                                         className="peer-todo-item d-flex align-items-center justify-content-between p-2 mb-1 rounded-3 border-bottom border-secondary-subtle"
                                     >
                                         <div className="d-flex align-items-center gap-3">
@@ -315,7 +315,7 @@ export default function GroupStudyPeerPanel({
                                                 readOnly
                                                 style={{ cursor: 'not-allowed', opacity: 0.85 }}
                                             />
-                                            <span 
+                                            <span
                                                 className={`todo-text ${todo.is_completed ? 'completed text-decoration-line-through text-muted' : 'text-body'}`}
                                             >
                                                 {todo.title}
