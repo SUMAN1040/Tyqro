@@ -62,7 +62,7 @@ export default function Landing({ onNavigate }) {
                                         <a className="nav-link text-secondary fw-medium px-2 py-1" href="#benefits" onClick={() => setIsNavOpen(false)}>Benefits</a>
                                     </li>
                                 </ul>
-                                <div className="d-flex align-items-center gap-2 mt-2 mt-lg-0 w-100 w-lg-auto justify-content-center">
+                                <div className="d-flex d-lg-none align-items-center gap-2 mt-2 w-100 justify-content-center">
                                     <button onClick={() => { setIsNavOpen(false); onNavigate('login'); }} className="btn btn-outline-dark btn-sm rounded-pill px-3 py-1 fw-medium">
                                         Sign In
                                     </button>
