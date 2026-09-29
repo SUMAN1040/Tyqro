@@ -58,25 +58,29 @@ export default function Dashboard({ user }) {
     const [showConfirmStart, setShowConfirmStart] = useState(false);
     const autoEndAttempted = useRef(false);
 
-    // Fetch initial status and todos
+    // Apply attendance status immediately into local state
+    const applyAttendanceStatus = (status) => {
+        if (!status) return;
+        setIsActive(Boolean(status.is_active));
+        if (!status.is_active) {
+            autoEndAttempted.current = false;
+        }
+        setStartTime(status.start_time ? new Date(status.start_time) : null);
+        setEndTime(status.end_time ? new Date(status.end_time) : null);
+        setTotalBreakSeconds(Number(status.total_break_duration) || 0);
+        setCurrentBreakStart(status.current_break_start ? new Date(status.current_break_start) : null);
+        setIsBreak(Boolean(status.current_break_start));
+    };
+
+    // Fetch initial status and todos concurrently
     const fetchStatusAndTodos = async () => {
         try {
-            // Fetch timer status
-            const statusRes = await API.get('/api/attendance/status/');
-            const status = statusRes.data;
-            setIsActive(status.is_active);
-            if (!status.is_active) {
-                autoEndAttempted.current = false;
-            }
-            setStartTime(status.start_time ? new Date(status.start_time) : null);
-            setEndTime(status.end_time ? new Date(status.end_time) : null);
-            setTotalBreakSeconds(status.total_break_duration);
-            setCurrentBreakStart(status.current_break_start ? new Date(status.current_break_start) : null);
-            setIsBreak(status.current_break_start !== null);
-
-            // Fetch daily todos
-            const todosRes = await API.get('/api/todos/list/');
-            setTodos(todosRes.data.todos);
+            const [statusRes, todosRes] = await Promise.all([
+                API.get('/api/attendance/status/'),
+                API.get('/api/todos/list/')
+            ]);
+            applyAttendanceStatus(statusRes.data);
+            setTodos(todosRes.data.todos || []);
         } catch (err) {
             console.error('Failed to load status or tasks:', err);
         }
@@ -162,8 +166,8 @@ export default function Dashboard({ user }) {
                         setTotalSeconds(targetSeconds + totalBreakSeconds);
                         
                         API.post('/api/attendance/end/', {})
-                            .then(() => {
-                                fetchStatusAndTodos();
+                            .then((res) => {
+                                applyAttendanceStatus(res.data);
                                 fetchHeatmap(selectedYear);
                             })
                             .catch((err) => console.error('Failed to auto end work', err));
@@ -177,8 +181,8 @@ export default function Dashboard({ user }) {
                         if (now >= endLimit) {
                             autoEndAttempted.current = true;
                             API.post('/api/attendance/end/', {})
-                                .then(() => {
-                                    fetchStatusAndTodos();
+                                .then((res) => {
+                                    applyAttendanceStatus(res.data);
                                     fetchHeatmap(selectedYear);
                                 })
                                 .catch((err) => console.error('Failed to auto end work', err));
@@ -238,12 +242,19 @@ export default function Dashboard({ user }) {
             }
         }
 
-        // Call start endpoint directly
+        // Optimistic UI update: Start instantly on screen
+        const optimisticStart = new Date();
+        setIsActive(true);
+        setStartTime(optimisticStart);
+        setEndTime(null);
+
         try {
-            await API.post('/api/attendance/start/', {});
-            fetchStatusAndTodos();
+            const res = await API.post('/api/attendance/start/', {});
+            applyAttendanceStatus(res.data);
         } catch (err) {
-            alert(err.response?.data?.error || 'Failed to start work.');
+            // Roll back on failure
+            fetchStatusAndTodos();
+            alert(err.response?.data?.message || err.response?.data?.error || 'Failed to start work.');
         }
     };
 
@@ -253,12 +264,20 @@ export default function Dashboard({ user }) {
             return;
         }
 
+        setShowReasonModal(false);
+        // Optimistic UI update
+        const optimisticStart = new Date();
+        setIsActive(true);
+        setStartTime(optimisticStart);
+        setEndTime(null);
+
         try {
-            await API.post('/api/attendance/start/', { late_reason: reasonText });
-            setShowReasonModal(false);
-            fetchStatusAndTodos();
+            const res = await API.post('/api/attendance/start/', { late_reason: reasonText });
+            applyAttendanceStatus(res.data);
         } catch (err) {
-            setReasonError(err.response?.data?.error || 'Failed to start work.');
+            fetchStatusAndTodos();
+            setShowReasonModal(true);
+            setReasonError(err.response?.data?.message || err.response?.data?.error || 'Failed to start work.');
         }
     };
 
@@ -294,12 +313,19 @@ export default function Dashboard({ user }) {
     };
 
     const proceedEndWork = async () => {
+        // Optimistic UI update: stop session immediately
+        const optimisticEnd = new Date();
+        setIsActive(false);
+        setIsBreak(false);
+        setEndTime(optimisticEnd);
+
         try {
-            await API.post('/api/attendance/end/', {});
-            fetchStatusAndTodos();
+            const res = await API.post('/api/attendance/end/', {});
+            applyAttendanceStatus(res.data);
             fetchHeatmap(selectedYear);
         } catch (err) {
-            alert(err.response?.data?.error || 'Failed to end work.');
+            fetchStatusAndTodos();
+            alert(err.response?.data?.message || err.response?.data?.error || 'Failed to end work.');
         }
     };
 
@@ -309,26 +335,51 @@ export default function Dashboard({ user }) {
             return;
         }
 
+        setShowReasonModal(false);
+        const optimisticEnd = new Date();
+        setIsActive(false);
+        setIsBreak(false);
+        setEndTime(optimisticEnd);
+
         try {
-            await API.post('/api/attendance/end/', { early_leave_reason: reasonText });
-            setShowReasonModal(false);
-            fetchStatusAndTodos();
+            const res = await API.post('/api/attendance/end/', { early_leave_reason: reasonText });
+            applyAttendanceStatus(res.data);
             fetchHeatmap(selectedYear);
         } catch (err) {
-            setReasonError(err.response?.data?.error || 'Failed to end work.');
+            fetchStatusAndTodos();
+            setShowReasonModal(true);
+            setReasonError(err.response?.data?.message || err.response?.data?.error || 'Failed to end work.');
         }
     };
 
     const handleToggleBreak = async () => {
-        try {
-            if (isBreak) {
-                await API.post('/api/attendance/end-break/');
-            } else {
-                await API.post('/api/attendance/start-break/');
+        const enteringBreak = !isBreak;
+        const now = new Date();
+
+        // Optimistic break switch
+        if (enteringBreak) {
+            setIsBreak(true);
+            setCurrentBreakStart(now);
+        } else {
+            setIsBreak(false);
+            if (currentBreakStart) {
+                const addedBreak = Math.floor((now.getTime() - currentBreakStart.getTime()) / 1000);
+                setTotalBreakSeconds(prev => prev + addedBreak);
             }
-            fetchStatusAndTodos();
+            setCurrentBreakStart(null);
+        }
+
+        try {
+            let res;
+            if (!enteringBreak) {
+                res = await API.post('/api/attendance/end-break/');
+            } else {
+                res = await API.post('/api/attendance/start-break/');
+            }
+            applyAttendanceStatus(res.data);
         } catch (err) {
-            alert(err.response?.data?.error || 'Failed to toggle break.');
+            fetchStatusAndTodos();
+            alert(err.response?.data?.message || err.response?.data?.error || 'Failed to toggle break.');
         }
     };
 

@@ -38,6 +38,23 @@ def auto_close_previous_sessions(user):
         perf.total_points = perf.attendance_points
         perf.save()
 
+def serialize_attendance_status(attendance):
+    if not attendance:
+        return {
+            'is_active': False,
+            'start_time': None,
+            'end_time': None,
+            'total_break_duration': 0,
+            'current_break_start': None
+        }
+    return {
+        'is_active': attendance.is_active,
+        'start_time': attendance.start_time.isoformat() if attendance.start_time else None,
+        'end_time': attendance.end_time.isoformat() if attendance.end_time else None,
+        'total_break_duration': attendance.total_break_duration.total_seconds(),
+        'current_break_start': attendance.current_break_start.isoformat() if attendance.current_break_start else None
+    }
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @transaction.atomic
@@ -49,11 +66,9 @@ def start_work(request):
     # Lock active session lookup to prevent concurrent starting of work
     active_attendance = Attendance.objects.select_for_update().filter(user=request.user, is_active=True).first()
     if active_attendance:
-        return Response({'status': 'error', 'message': 'Work already started'})
+        return Response({'status': 'error', 'message': 'Work already started'}, status=status.HTTP_400_BAD_REQUEST)
 
-    attendance, created = Attendance.objects.get_or_create(user=request.user, date=today)
-    # Acquire row lock on the attendance record
-    attendance = Attendance.objects.select_for_update().get(id=attendance.id)
+    attendance, created = Attendance.objects.select_for_update().get_or_create(user=request.user, date=today)
     
     if not attendance.start_time:
         attendance.start_time = timezone.now()
@@ -61,8 +76,8 @@ def start_work(request):
         if 'late_reason' in data:
             attendance.late_reason = data['late_reason']
         attendance.save()
-        return Response({'status': 'success', 'start_time': attendance.start_time.isoformat()})
-    return Response({'status': 'error', 'message': 'Work already started'})
+        return Response({'status': 'success', **serialize_attendance_status(attendance)})
+    return Response({'status': 'error', 'message': 'Work already started'}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -100,12 +115,11 @@ def end_work(request):
         
         return Response({
             'status': 'success',
-            'end_time': attendance.end_time.isoformat(),
             'duration': str(attendance.duration),
-            'total_break_duration': attendance.total_break_duration.total_seconds()
+            **serialize_attendance_status(attendance)
         })
     except Attendance.DoesNotExist:
-        return Response({'status': 'error', 'message': 'No active work session'})
+        return Response({'status': 'error', 'message': 'No active work session'}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -115,16 +129,15 @@ def start_break(request):
     try:
         attendance = Attendance.objects.select_for_update().get(user=request.user, is_active=True)
         if attendance.current_break_start:
-            return Response({'status': 'error', 'message': 'Already on break'})
+            return Response({'status': 'error', 'message': 'Already on break'}, status=status.HTTP_400_BAD_REQUEST)
         attendance.current_break_start = timezone.now()
         attendance.save()
         return Response({
             'status': 'success',
-            'current_break_start': attendance.current_break_start.isoformat(),
-            'total_break_duration': attendance.total_break_duration.total_seconds()
+            **serialize_attendance_status(attendance)
         })
     except Attendance.DoesNotExist:
-        return Response({'status': 'error', 'message': 'No active work session'})
+        return Response({'status': 'error', 'message': 'No active work session'}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -134,7 +147,7 @@ def end_break(request):
     try:
         attendance = Attendance.objects.select_for_update().get(user=request.user, is_active=True)
         if not attendance.current_break_start:
-            return Response({'status': 'error', 'message': 'Not currently on break'})
+            return Response({'status': 'error', 'message': 'Not currently on break'}, status=status.HTTP_400_BAD_REQUEST)
         now = timezone.now()
         elapsed = now - attendance.current_break_start
         attendance.total_break_duration += elapsed
@@ -142,10 +155,10 @@ def end_break(request):
         attendance.save()
         return Response({
             'status': 'success',
-            'total_break_duration': attendance.total_break_duration.total_seconds()
+            **serialize_attendance_status(attendance)
         })
     except Attendance.DoesNotExist:
-        return Response({'status': 'error', 'message': 'No active work session'})
+        return Response({'status': 'error', 'message': 'No active work session'}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -155,18 +168,6 @@ def attendance_status(request):
     today = timezone.now().date()
     try:
         attendance = Attendance.objects.get(user=request.user, date=today)
-        return Response({
-            'is_active': attendance.is_active,
-            'start_time': attendance.start_time.isoformat() if attendance.start_time else None,
-            'end_time': attendance.end_time.isoformat() if attendance.end_time else None,
-            'total_break_duration': attendance.total_break_duration.total_seconds(),
-            'current_break_start': attendance.current_break_start.isoformat() if attendance.current_break_start else None
-        })
+        return Response(serialize_attendance_status(attendance))
     except Attendance.DoesNotExist:
-        return Response({
-            'is_active': False,
-            'start_time': None,
-            'end_time': None,
-            'total_break_duration': 0,
-            'current_break_start': None
-        })
+        return Response(serialize_attendance_status(None))
