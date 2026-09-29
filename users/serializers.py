@@ -7,7 +7,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserProfile
-        fields = ['daily_hours_target', 'work_days', 'use_fixed_schedule', 'work_start_time', 'work_end_time', 'avatar_url']
+        fields = ['daily_hours_target', 'work_days', 'use_fixed_schedule', 'work_start_time', 'work_end_time', 'avatar_url', 'study_code']
 
     def get_avatar_url(self, obj):
         if obj.avatar:

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { API } from '../api';
+import GroupStudyModal from '../components/GroupStudyModal';
+import GroupStudyPeerPanel from '../components/GroupStudyPeerPanel';
 
 const CLOCK_MARKERS = (() => {
     const list = [];
@@ -50,6 +52,10 @@ export default function Dashboard({ user }) {
     const [dataMap, setDataMap] = useState({});
     const [selectedDateStats, setSelectedDateStats] = useState({ date: 'Today', hours: 0, completed: 0, total: 0 });
 
+    // Group study states
+    const [groupStatus, setGroupStatus] = useState({ in_group: false, members: [], count: 0, max_members: 10 });
+    const [isSplitView, setIsSplitView] = useState(false);
+
     // Modals & Reason Prompt states
     const [showReasonModal, setShowReasonModal] = useState(false);
     const [reasonType, setReasonType] = useState(''); // 'late' or 'early'
@@ -57,6 +63,20 @@ export default function Dashboard({ user }) {
     const [reasonError, setReasonError] = useState('');
     const [showConfirmStart, setShowConfirmStart] = useState(false);
     const autoEndAttempted = useRef(false);
+
+    // Fetch Group Status
+    const fetchGroupStatus = async () => {
+        try {
+            const res = await API.get('/api/study/status/');
+            setGroupStatus(res.data);
+            // If active in a group with other members and split view was never toggled off
+            if (res.data.in_group && res.data.members?.length > 1) {
+                // Auto-enable split view if user has peers
+            }
+        } catch (err) {
+            console.error('Failed to load group status:', err);
+        }
+    };
 
     // Apply attendance status immediately into local state
     const applyAttendanceStatus = (status) => {
@@ -119,6 +139,11 @@ export default function Dashboard({ user }) {
         setCurrentDate(today);
         fetchStatusAndTodos();
         fetchHeatmap(new Date().getFullYear());
+        fetchGroupStatus();
+
+        // Periodically refresh group status every 10s
+        const groupInterval = setInterval(fetchGroupStatus, 10000);
+        return () => clearInterval(groupInterval);
     }, []);
 
     // Local interval timers for clock and session counters
@@ -511,228 +536,308 @@ export default function Dashboard({ user }) {
 
     const activeTodosCount = todos.filter(t => t.is_completed).length;
 
-    return (
-        <div className="text-start">
-            <div className="row mb-4">
-                <div className="col-12">
-                    <h2 className="fw-bold mb-1">Hello, {user?.first_name || user?.username} 👋</h2>
-                    <p className="text-muted" id="currentDateDisplay">Today's Date: {currentDate}</p>
+    const renderAttendanceCard = () => (
+        <div className="card h-100 border-0 shadow-sm rounded-4">
+            <div className="card-body p-4 d-flex flex-column align-items-center justify-content-center text-center">
+                <h5 className="fw-bold mb-4">Work Attendance</h5>
+                <div className="text-muted small fw-medium text-uppercase mb-1">
+                    {isBreak ? 'Break Session Active' : 'Total Work Time'}
+                </div>
+                <div className="display-4 fw-bold text-primary mb-3 font-monospace">
+                    {formatTime(totalSeconds)}
+                </div>
+                
+                {/* Breaks / Net details (hidden if not active) */}
+                {(isActive || endTime) && (
+                    <div className="w-100 mb-3">
+                        <div className="row g-2">
+                            <div className="col-6">
+                                <div className="p-2 bg-warning-subtle text-warning border border-warning-subtle rounded-3 text-center">
+                                    <div className="small fw-semibold text-uppercase" style={{ fontSize: '0.75rem' }}>
+                                        <i className="bi bi-cup-hot me-1"></i> Break
+                                    </div>
+                                    <div className="font-monospace fw-bold">{formatTime(breakSeconds)}</div>
+                                </div>
+                            </div>
+                            <div className="col-6">
+                                <div className="p-2 bg-success-subtle text-success border border-success-subtle rounded-3 text-center">
+                                    <div className="small fw-semibold text-uppercase" style={{ fontSize: '0.75rem' }}>
+                                        <i className="bi bi-briefcase me-1"></i> Net Work
+                                    </div>
+                                    <div className="font-monospace fw-bold">{formatTime(netSeconds)}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                <div className="d-flex gap-2 w-100 mb-3">
+                    {!isActive && !endTime ? (
+                        <button className="btn btn-primary flex-grow-1 py-2 fw-medium rounded-pill" onClick={handleStartWorkClick}>
+                            Start Work
+                        </button>
+                    ) : isActive ? (
+                        <button className="btn btn-outline-danger flex-grow-1 py-2 fw-medium rounded-pill" onClick={handleEndWorkClick}>
+                            End Work
+                        </button>
+                    ) : (
+                        <button className="btn btn-secondary flex-grow-1 py-2 fw-medium rounded-pill" disabled>
+                            Shift Ended
+                        </button>
+                    )}
+                </div>
+
+                {isActive && (
+                    <div className="w-100">
+                        <button className={`btn w-100 py-2 fw-medium rounded-pill d-flex align-items-center justify-content-center gap-2 ${isBreak ? 'btn-success' : 'btn-warning'}`} onClick={handleToggleBreak}>
+                            <i className={isBreak ? 'bi bi-play-fill' : 'bi bi-pause-fill'}></i>
+                            {isBreak ? 'Resume Work' : 'Go on Break'}
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
+    const renderTodoCard = () => (
+        <div className="card h-100 border-0 shadow-sm rounded-4">
+            <div className="card-body p-4 d-flex flex-column">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                    <h5 className="fw-bold mb-0">Today's Todo List</h5>
+                    <span className="badge bg-primary rounded-pill">
+                        {activeTodosCount}/{todos.length}
+                    </span>
+                </div>
+                
+                <form onSubmit={handleAddTodo} className="input-group mb-4">
+                    <input
+                        type="text"
+                        className="form-control rounded-start-pill bg-light border-0 px-4 py-2"
+                        placeholder="Add a task..."
+                        value={newTodo}
+                        onChange={(e) => setNewTodo(e.target.value)}
+                        disabled={isActive || endTime}
+                    />
+                    <button type="submit" className="btn btn-primary rounded-end-pill px-4" disabled={todoLoading || isActive || endTime}>
+                        Add
+                    </button>
+                </form>
+
+                <div className="todo-list flex-grow-1 overflow-auto" style={{ maxHeight: isSplitView ? '240px' : '200px' }}>
+                    {todos.length === 0 ? (
+                        <div className="text-center text-muted py-3 small">No tasks for today. Add one above!</div>
+                    ) : (
+                        todos.map((todo) => (
+                            <div key={todo.id} className="todo-item d-flex align-items-center justify-content-between p-2 mb-1 border-bottom border-secondary-subtle">
+                                <div className="d-flex align-items-center gap-3">
+                                    <input
+                                        type="checkbox"
+                                        className="form-check-input todo-checkbox"
+                                        checked={todo.is_completed}
+                                        onChange={() => handleToggleTodo(todo.id)}
+                                        disabled={!isActive}
+                                    />
+                                    <span className={`todo-text ${todo.is_completed ? 'completed' : ''}`}>
+                                        {todo.title}
+                                    </span>
+                                </div>
+                                <button className="btn btn-link text-danger p-0" onClick={() => handleDeleteTodo(todo.id)} disabled={endTime}>
+                                    <i className="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        ))
+                    )}
                 </div>
             </div>
+        </div>
+    );
 
-            <div className="row g-4 mb-4">
-                {/* Attendance Timer Card */}
-                <div className="col-12 col-md-6 col-lg-4">
-                    <div className="card h-100 border-0 shadow-sm rounded-4">
-                        <div className="card-body p-4 d-flex flex-column align-items-center justify-content-center text-center">
-                            <h5 className="fw-bold mb-4">Work Attendance</h5>
-                            <div className="text-muted small fw-medium text-uppercase mb-1">
-                                {isBreak ? 'Break Session Active' : 'Total Work Time'}
+    const renderClockCard = () => (
+        <div className="card h-100 border-0 shadow-sm rounded-4">
+            <div className="card-body p-4 d-flex flex-column align-items-center justify-content-center text-center">
+                <h5 className="fw-bold mb-4">Current Time</h5>
+                <div className="analog-clock mb-3">
+                    <div className="clock-face">
+                        {CLOCK_MARKERS.map((marker) => (
+                            <div
+                                key={marker.value}
+                                className={`clock-marker ${marker.isMain ? 'main-marker' : 'dot-marker'}`}
+                                style={marker.style}
+                            >
+                                {marker.isMain ? marker.value : ''}
                             </div>
-                            <div className="display-4 fw-bold text-primary mb-3 font-monospace">
-                                {formatTime(totalSeconds)}
-                            </div>
-                            
-                            {/* Breaks / Net details (hidden if not active) */}
-                            {(isActive || endTime) && (
-                                <div className="w-100 mb-3">
-                                    <div className="row g-2">
-                                        <div className="col-6">
-                                            <div className="p-2 bg-warning-subtle text-warning border border-warning-subtle rounded-3 text-center">
-                                                <div className="small fw-semibold text-uppercase" style={{ fontSize: '0.75rem' }}>
-                                                    <i className="bi bi-cup-hot me-1"></i> Break
-                                                </div>
-                                                <div className="font-monospace fw-bold">{formatTime(breakSeconds)}</div>
-                                            </div>
-                                        </div>
-                                        <div className="col-6">
-                                            <div className="p-2 bg-success-subtle text-success border border-success-subtle rounded-3 text-center">
-                                                <div className="small fw-semibold text-uppercase" style={{ fontSize: '0.75rem' }}>
-                                                    <i className="bi bi-briefcase me-1"></i> Net Work
-                                                </div>
-                                                <div className="font-monospace fw-bold">{formatTime(netSeconds)}</div>
-                                            </div>
+                        ))}
+                        <div className="hand hour-hand" style={{ transform: `rotate(${clockAngles.hour}deg)` }}></div>
+                        <div className="hand min-hand" style={{ transform: `rotate(${clockAngles.minute}deg)` }}></div>
+                        <div className="hand second-hand" style={{ transform: `rotate(${clockAngles.second}deg)` }}></div>
+                        <div className="clock-center"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderHeatmapSection = () => (
+        <div className="row g-4">
+            <div className="col-12">
+                <div className="card border-0 shadow-sm rounded-4">
+                    <div className="card-body p-4">
+                        <h5 className="fw-bold mb-4">Performance Heatmap</h5>
+                        <div className="row">
+                            <div className="col-12 col-lg-10">
+                                <div className="d-flex mb-4 pb-2">
+                                    <div className="heatmap-days text-muted small me-2 d-flex flex-column" style={{ marginTop: '0px', gap: '4px', fontSize: '0.75rem' }}>
+                                        <div style={{ height: '14px', lineHeight: '14px' }}>Sun</div>
+                                        <div style={{ height: '14px', lineHeight: '14px' }}>Mon</div>
+                                        <div style={{ height: '14px', lineHeight: '14px' }}>Tue</div>
+                                        <div style={{ height: '14px', lineHeight: '14px' }}>Wed</div>
+                                        <div style={{ height: '14px', lineHeight: '14px' }}>Thu</div>
+                                        <div style={{ height: '14px', lineHeight: '14px' }}>Fri</div>
+                                        <div style={{ height: '14px', lineHeight: '14px' }}>Sat</div>
+                                    </div>
+                                    
+                                    <div className="flex-grow-1 overflow-auto">
+                                        <div className="heatmap-container d-flex align-items-start" style={{ gap: '16px' }}>
+                                            {renderHeatmapGrid()}
                                         </div>
                                     </div>
                                 </div>
-                            )}
-
-                            <div className="d-flex gap-2 w-100 mb-3">
-                                {!isActive && !endTime ? (
-                                    <button className="btn btn-primary flex-grow-1 py-2 fw-medium rounded-pill" onClick={handleStartWorkClick}>
-                                        Start Work
-                                    </button>
-                                ) : isActive ? (
-                                    <button className="btn btn-outline-danger flex-grow-1 py-2 fw-medium rounded-pill" onClick={handleEndWorkClick}>
-                                        End Work
-                                    </button>
-                                ) : (
-                                    <button className="btn btn-secondary flex-grow-1 py-2 fw-medium rounded-pill" disabled>
-                                        Shift Ended
-                                    </button>
-                                )}
                             </div>
-
-                            {isActive && (
-                                <div className="w-100">
-                                    <button className={`btn w-100 py-2 fw-medium rounded-pill d-flex align-items-center justify-content-center gap-2 ${isBreak ? 'btn-success' : 'btn-warning'}`} onClick={handleToggleBreak}>
-                                        <i className={isBreak ? 'bi bi-play-fill' : 'bi bi-pause-fill'}></i>
-                                        {isBreak ? 'Resume Work' : 'Go on Break'}
-                                    </button>
+                            <div className="col-12 col-lg-2 border-start-lg pt-3 pt-lg-0 mt-3 mt-lg-0">
+                                <div className="d-flex flex-row flex-lg-column gap-2 justify-content-center justify-content-lg-start">
+                                    {availableYears.map((y) => (
+                                        <button
+                                            key={y}
+                                            className={`btn btn-sm py-2 px-3 rounded-pill text-center ${y === selectedYear ? 'btn-primary text-white' : 'btn-outline-secondary'}`}
+                                            onClick={() => fetchHeatmap(y)}
+                                        >
+                                            {y}
+                                        </button>
+                                    ))}
                                 </div>
-                            )}
+                            </div>
+                        </div>
+                        
+                        {/* Selected Date Stats */}
+                        <div className="d-flex align-items-center mt-4 mb-2">
+                            <h6 className="fw-bold mb-0 text-muted">Stats for {selectedDateStats.date}</h6>
+                        </div>
+                        <div className="row text-center g-3 justify-content-center">
+                            <div className="col-6 col-md-4">
+                                <div className="p-3 bg-light rounded-4 h-100 d-flex flex-column justify-content-center">
+                                    <div className="text-muted small fw-medium text-uppercase">Tasks Done</div>
+                                    <div className="fs-4 fw-bold text-info">
+                                        {selectedDateStats.completed} / {selectedDateStats.total}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="col-6 col-md-4">
+                                <div className="p-3 bg-light rounded-4 h-100 d-flex flex-column justify-content-center">
+                                    <div className="text-muted small fw-medium text-uppercase">Hours Worked</div>
+                                    <div className="fs-4 fw-bold text-success">
+                                        {parseFloat(selectedDateStats.hours).toFixed(1)}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    );
 
-                {/* Todo List Card */}
-                <div className="col-12 col-md-6 col-lg-5">
-                    <div className="card h-100 border-0 shadow-sm rounded-4">
-                        <div className="card-body p-4 d-flex flex-column">
-                            <div className="d-flex justify-content-between align-items-center mb-3">
-                                <h5 className="fw-bold mb-0">Today's Todo List</h5>
-                                <span className="badge bg-primary rounded-pill">
-                                    {activeTodosCount}/{todos.length}
+    return (
+        <div className="text-start position-relative">
+            {/* Greeting & Group Mode Switcher Header */}
+            <div className="row mb-4 align-items-center">
+                <div className="col-12 col-md-7">
+                    <h2 className="fw-bold mb-1">Hello, {user?.first_name || user?.username} 👋</h2>
+                    <p className="text-muted mb-0" id="currentDateDisplay">Today's Date: {currentDate}</p>
+                </div>
+                {groupStatus?.in_group && (
+                    <div className="col-12 col-md-5 d-flex justify-content-md-end align-items-center gap-2 mt-3 mt-md-0">
+                        <button 
+                            className={`btn ${isSplitView ? 'btn-primary' : 'btn-outline-primary'} rounded-pill px-3 py-2 fw-medium d-flex align-items-center gap-2 shadow-sm`}
+                            onClick={() => setIsSplitView(!isSplitView)}
+                        >
+                            <i className="bi bi-layout-split"></i>
+                            <span>{isSplitView ? 'Solo View' : 'Group Study Split View'}</span>
+                            <span className="badge bg-white text-dark rounded-pill px-2 font-monospace">
+                                {groupStatus.members?.length || 1}/10
+                            </span>
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* Split View vs Full View */}
+            {isSplitView ? (
+                <div className="row g-4 mb-4">
+                    {/* Left Half: My Workspace (Interactive) */}
+                    <div className="col-12 col-xl-6">
+                        <div className="d-flex flex-column gap-4">
+                            <div className="d-flex align-items-center justify-content-between p-3 bg-glass rounded-4 border border-secondary-subtle">
+                                <span className="small fw-bold text-primary d-flex align-items-center gap-2">
+                                    <i className="bi bi-person-workspace"></i> My Workspace (Interactive)
+                                </span>
+                                <span className="badge bg-primary-subtle text-primary rounded-pill px-3 py-1">
+                                    {isActive ? '🟢 Working' : isBreak ? '🟡 On Break' : '⚪ Shift Idle'}
                                 </span>
                             </div>
-                            
-                            <form onSubmit={handleAddTodo} className="input-group mb-4">
-                                <input
-                                    type="text"
-                                    className="form-control rounded-start-pill bg-light border-0 px-4 py-2"
-                                    placeholder="Add a task..."
-                                    value={newTodo}
-                                    onChange={(e) => setNewTodo(e.target.value)}
-                                    disabled={isActive || endTime}
-                                />
-                                <button type="submit" className="btn btn-primary rounded-end-pill px-4" disabled={todoLoading || isActive || endTime}>
-                                    Add
-                                </button>
-                            </form>
 
-                            <div className="todo-list flex-grow-1 overflow-auto" style={{ maxHeight: '200px' }}>
-                                {todos.length === 0 ? (
-                                    <div className="text-center text-muted py-3 small">No tasks for today. Add one above!</div>
-                                ) : (
-                                    todos.map((todo) => (
-                                        <div key={todo.id} className="todo-item d-flex align-items-center justify-content-between p-2 mb-1 border-bottom border-secondary-subtle">
-                                            <div className="d-flex align-items-center gap-3">
-                                                <input
-                                                    type="checkbox"
-                                                    className="form-check-input todo-checkbox"
-                                                    checked={todo.is_completed}
-                                                    onChange={() => handleToggleTodo(todo.id)}
-                                                    disabled={!isActive}
-                                                />
-                                                <span className={`todo-text ${todo.is_completed ? 'completed' : ''}`}>
-                                                    {todo.title}
-                                                </span>
-                                            </div>
-                                            <button className="btn btn-link text-danger p-0" onClick={() => handleDeleteTodo(todo.id)} disabled={endTime}>
-                                                <i className="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                    ))
-                                )}
+                            <div>
+                                {renderAttendanceCard()}
+                            </div>
+
+                            <div>
+                                {renderTodoCard()}
+                            </div>
+
+                            <div>
+                                {renderClockCard()}
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Clock Card */}
-                <div className="col-12 col-md-12 col-lg-3">
-                    <div className="card h-100 border-0 shadow-sm rounded-4">
-                        <div className="card-body p-4 d-flex flex-column align-items-center justify-content-center text-center">
-                            <h5 className="fw-bold mb-4">Current Time</h5>
-                            <div className="analog-clock mb-3">
-                                <div className="clock-face">
-                                    {CLOCK_MARKERS.map((marker) => (
-                                        <div
-                                            key={marker.value}
-                                            className={`clock-marker ${marker.isMain ? 'main-marker' : 'dot-marker'}`}
-                                            style={marker.style}
-                                        >
-                                            {marker.isMain ? marker.value : ''}
-                                        </div>
-                                    ))}
-                                    <div className="hand hour-hand" style={{ transform: `rotate(${clockAngles.hour}deg)` }}></div>
-                                    <div className="hand min-hand" style={{ transform: `rotate(${clockAngles.minute}deg)` }}></div>
-                                    <div className="hand second-hand" style={{ transform: `rotate(${clockAngles.second}deg)` }}></div>
-                                    <div className="clock-center"></div>
-                                </div>
-                            </div>
-                        </div>
+                    {/* Right Half: Group Study Peer View (Read-Only) */}
+                    <div className="col-12 col-xl-6">
+                        <GroupStudyPeerPanel 
+                            user={user}
+                            groupStatus={groupStatus}
+                            onCloseSplitView={() => setIsSplitView(false)}
+                            onOpenModal={() => {
+                                const fabBtn = document.querySelector('.group-study-fab');
+                                if (fabBtn) fabBtn.click();
+                            }}
+                        />
                     </div>
                 </div>
-            </div>
+            ) : (
+                /* Full View (3 Columns) */
+                <div className="row g-4 mb-4">
+                    <div className="col-12 col-md-6 col-lg-4">
+                        {renderAttendanceCard()}
+                    </div>
+                    <div className="col-12 col-md-6 col-lg-5">
+                        {renderTodoCard()}
+                    </div>
+                    <div className="col-12 col-md-12 col-lg-3">
+                        {renderClockCard()}
+                    </div>
+                </div>
+            )}
 
             {/* Performance Heatmap Section */}
-            <div className="row g-4">
-                <div className="col-12">
-                    <div className="card border-0 shadow-sm rounded-4">
-                        <div className="card-body p-4">
-                            <h5 className="fw-bold mb-4">Performance Heatmap</h5>
-                            <div className="row">
-                                <div className="col-12 col-lg-10">
-                                    <div className="d-flex mb-4 pb-2">
-                                        <div className="heatmap-days text-muted small me-2 d-flex flex-column" style={{ marginTop: '0px', gap: '4px', fontSize: '0.75rem' }}>
-                                            <div style={{ height: '14px', lineHeight: '14px' }}>Sun</div>
-                                            <div style={{ height: '14px', lineHeight: '14px' }}>Mon</div>
-                                            <div style={{ height: '14px', lineHeight: '14px' }}>Tue</div>
-                                            <div style={{ height: '14px', lineHeight: '14px' }}>Wed</div>
-                                            <div style={{ height: '14px', lineHeight: '14px' }}>Thu</div>
-                                            <div style={{ height: '14px', lineHeight: '14px' }}>Fri</div>
-                                            <div style={{ height: '14px', lineHeight: '14px' }}>Sat</div>
-                                        </div>
-                                        
-                                        <div className="flex-grow-1 overflow-auto">
-                                            <div className="heatmap-container d-flex align-items-start" style={{ gap: '16px' }}>
-                                                {renderHeatmapGrid()}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="col-12 col-lg-2 border-start-lg pt-3 pt-lg-0 mt-3 mt-lg-0">
-                                    <div className="d-flex flex-row flex-lg-column gap-2 justify-content-center justify-content-lg-start">
-                                        {availableYears.map((y) => (
-                                            <button
-                                                key={y}
-                                                className={`btn btn-sm py-2 px-3 rounded-pill text-center ${y === selectedYear ? 'btn-primary text-white' : 'btn-outline-secondary'}`}
-                                                onClick={() => fetchHeatmap(y)}
-                                            >
-                                                {y}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            {/* Selected Date Stats */}
-                            <div className="d-flex align-items-center mt-4 mb-2">
-                                <h6 className="fw-bold mb-0 text-muted">Stats for {selectedDateStats.date}</h6>
-                            </div>
-                            <div className="row text-center g-3 justify-content-center">
-                                <div className="col-6 col-md-4">
-                                    <div className="p-3 bg-light rounded-4 h-100 d-flex flex-column justify-content-center">
-                                        <div className="text-muted small fw-medium text-uppercase">Tasks Done</div>
-                                        <div className="fs-4 fw-bold text-info">
-                                            {selectedDateStats.completed} / {selectedDateStats.total}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="col-6 col-md-4">
-                                    <div className="p-3 bg-light rounded-4 h-100 d-flex flex-column justify-content-center">
-                                        <div className="text-muted small fw-medium text-uppercase">Hours Worked</div>
-                                        <div className="fs-4 fw-bold text-success">
-                                            {parseFloat(selectedDateStats.hours).toFixed(1)}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {renderHeatmapSection()}
+
+            {/* Floating Group Study Modal & FAB Button */}
+            <GroupStudyModal 
+                user={user}
+                groupStatus={groupStatus}
+                onRefreshGroup={fetchGroupStatus}
+                isSplitView={isSplitView}
+                onToggleSplitView={setIsSplitView}
+            />
 
             {/* Confirm Start Modal */}
             {showConfirmStart && (

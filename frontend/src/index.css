@@ -298,3 +298,64 @@ input:focus {
         border-left: 1px solid var(--border-color) !important;
     }
 }
+
+/* Group Study Floating Action Button */
+.group-study-fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1040;
+    box-shadow: 0 8px 24px rgba(94, 106, 210, 0.35);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.group-study-fab:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 12px 28px rgba(94, 106, 210, 0.45);
+}
+
+.pulse-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #198754;
+    box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7);
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 8px rgba(25, 135, 84, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(25, 135, 84, 0);
+    }
+}
+
+.peer-tab-item {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid var(--border-color);
+}
+.peer-tab-item:hover, .peer-tab-item.active {
+    border-color: var(--primary-color);
+    background-color: rgba(94, 106, 210, 0.1) !important;
+}
+
+.peer-todo-item {
+    transition: background-color 0.2s ease;
+}
+.peer-todo-item:hover {
+    background-color: rgba(0,0,0,0.02);
+}
+[data-bs-theme="dark"] .peer-todo-item:hover {
+    background-color: rgba(255,255,255,0.03);
+}
+

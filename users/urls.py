@@ -4,6 +4,7 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 from . import views
+from . import study_views
 
 urlpatterns = [
     # Stateless Simple JWT Auth
@@ -21,4 +22,12 @@ urlpatterns = [
     path('api/auth/profile/delete/', views.delete_account, name='api_delete_account'),
     path('api/auth/forgot-password/', views.forgot_password, name='api_forgot_password'),
     path('api/auth/forgot-password/reset/', views.reset_password, name='api_reset_password'),
+
+    # Group Study Endpoints
+    path('api/study/code/', study_views.get_study_code, name='api_study_code'),
+    path('api/study/join/', study_views.join_study_group, name='api_study_join'),
+    path('api/study/status/', study_views.get_group_status, name='api_study_status'),
+    path('api/study/leave/', study_views.leave_study_group, name='api_study_leave'),
+    path('api/study/remove-member/', study_views.remove_group_member, name='api_study_remove_member'),
+    path('api/study/peer/<int:peer_id>/', study_views.get_peer_data, name='api_study_peer_data'),
 ]
