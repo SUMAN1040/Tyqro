@@ -127,6 +127,7 @@ def get_group_status(request):
         'my_code': my_code
     })
 
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def leave_study_group(request):
