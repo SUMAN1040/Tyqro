@@ -115,7 +115,6 @@ def get_group_status(request):
             'connected_at': conn.created_at.isoformat(),
         })
 
-
     my_code = request.user.profile.get_or_create_study_code()
 
     return Response({
