@@ -174,7 +174,6 @@ def get_peer_data(request, peer_id):
     att = Attendance.objects.filter(user=peer_user, date=today).first()
     todos = Todo.objects.filter(user=peer_user, date=today).order_by('created_at')
 
-
     # Avatar URL
     p = getattr(peer_user, 'profile', None)
     avatar_url = None
