@@ -220,6 +220,7 @@ def get_peer_data(request, peer_id):
         'created_at': t.created_at.isoformat()
     } for t in todos]
 
+
     return Response({
         'user': {
             'id': peer_user.id,
