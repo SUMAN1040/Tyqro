@@ -26,6 +26,19 @@ def send_email_async(email_message):
     thread.daemon = True
     thread.start()
 
+from django.utils import timezone
+
+def is_otp_valid(profile, entered_otp, expected_purpose):
+    if not profile.otp_code or not entered_otp:
+        return False, 'Invalid verification code.'
+    if profile.otp_purpose != expected_purpose or profile.otp_code != entered_otp:
+        return False, 'Invalid verification code.'
+    if profile.otp_created_at:
+        age = timezone.now() - profile.otp_created_at
+        if age > datetime.timedelta(minutes=15):
+            return False, 'Verification code has expired. Please request a new code.'
+    return True, None
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def signup_view(request):
@@ -75,10 +88,11 @@ def signup_view(request):
     profile, _ = UserProfile.objects.get_or_create(user=user)
     profile.otp_code = otp
     profile.otp_purpose = 'signup'
+    profile.otp_created_at = timezone.now()
     profile.save()
 
     mail_subject = 'Your Tyqro Verification Code'
-    message = f"Hi {user.first_name},\n\nThank you for signing up for Tyqro. Your 6-digit email verification code is:\n\n{otp}\n\nPlease enter this code to activate your account.\n\nThanks!"
+    message = f"Hi {user.first_name},\n\nThank you for signing up for Tyqro. Your 6-digit email verification code is:\n\n{otp}\n\nPlease enter this code to activate your account. (Code expires in 15 minutes)\n\nThanks!"
     email_msg = EmailMessage(mail_subject, message, to=[email])
     send_email_async(email_msg)
 
@@ -96,15 +110,17 @@ def verify_otp(request):
     user = get_object_or_404(User, id=user_id)
     profile = user.profile
 
-    if profile.otp_code == entered_otp and profile.otp_purpose == 'signup':
+    valid, err_msg = is_otp_valid(profile, entered_otp, 'signup')
+    if valid:
         user.is_active = True
         user.save()
         profile.otp_code = None
         profile.otp_purpose = None
+        profile.otp_created_at = None
         profile.save()
         return Response({'status': 'success', 'message': 'Account verified successfully!'})
     else:
-        return Response({'error': 'Invalid verification code.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': err_msg or 'Invalid verification code.'}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -142,10 +158,11 @@ def update_profile(request):
         user.profile.otp_code = otp
         user.profile.otp_purpose = 'email_update'
         user.profile.otp_pending_email = new_email
+        user.profile.otp_created_at = timezone.now()
         user.profile.save()
 
         mail_subject = 'Verify Your New Email Address'
-        message = f"Hi {user.first_name},\n\nWe received a request to update your email. Your verification code is:\n\n{otp}\n\nThanks!"
+        message = f"Hi {user.first_name},\n\nWe received a request to update your email. Your verification code is:\n\n{otp}\n\nPlease enter this code to verify your new email. (Code expires in 15 minutes)\n\nThanks!"
         email_msg = EmailMessage(mail_subject, message, to=[new_email])
         send_email_async(email_msg)
 
@@ -161,7 +178,8 @@ def verify_email_update(request):
     entered_otp = request.data.get('otp', '').strip()
     profile = user.profile
 
-    if profile.otp_purpose == 'email_update' and profile.otp_code == entered_otp and profile.otp_pending_email:
+    valid, err_msg = is_otp_valid(profile, entered_otp, 'email_update')
+    if valid and profile.otp_pending_email:
         user.email = profile.otp_pending_email
         user.username = profile.otp_pending_email[:150]
         user.save()
@@ -169,12 +187,13 @@ def verify_email_update(request):
         profile.otp_code = None
         profile.otp_purpose = None
         profile.otp_pending_email = None
+        profile.otp_created_at = None
         profile.save()
 
         serializer = UserSerializer(user)
         return Response({'status': 'success', 'user': serializer.data})
     else:
-        return Response({'error': 'Invalid verification code.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': err_msg or 'Invalid verification code.'}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -257,10 +276,11 @@ def forgot_password(request):
     profile = user.profile
     profile.otp_code = otp
     profile.otp_purpose = 'password_reset'
+    profile.otp_created_at = timezone.now()
     profile.save()
 
     mail_subject = 'Tyqro Password Reset Code'
-    message = f"Hi {user.first_name},\n\nYour 6-digit password reset verification code is:\n\n{otp}\n\nThanks!"
+    message = f"Hi {user.first_name},\n\nYour 6-digit password reset verification code is:\n\n{otp}\n\nPlease enter this code to reset your password. (Code expires in 15 minutes)\n\nThanks!"
     email_msg = EmailMessage(mail_subject, message, to=[email])
     send_email_async(email_msg)
 
@@ -282,7 +302,8 @@ def reset_password(request):
     except User.DoesNotExist:
         return Response({'error': 'User not found.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    if profile.otp_code == entered_otp and profile.otp_purpose == 'password_reset':
+    valid, err_msg = is_otp_valid(profile, entered_otp, 'password_reset')
+    if valid:
         try:
             validate_password(new_password, user)
         except ValidationError as e:
@@ -293,8 +314,9 @@ def reset_password(request):
 
         profile.otp_code = None
         profile.otp_purpose = None
+        profile.otp_created_at = None
         profile.save()
 
         return Response({'status': 'success', 'message': 'Password has been reset successfully.'})
     else:
-        return Response({'error': 'Invalid verification code.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': err_msg or 'Invalid verification code.'}, status=status.HTTP_400_BAD_REQUEST)

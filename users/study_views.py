@@ -66,18 +66,41 @@ def join_study_group(request):
         'peer_id': target_user.id
     })
 
+from django.db.models import Count, Q
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-@transaction.atomic
 def get_group_status(request):
     """
     Get current user's connected peers and live activity status (up to 10).
+    Uses batch queries to eliminate N+1 database queries.
     """
-    connections = PeerConnection.objects.filter(user=request.user).select_related('peer', 'peer__profile').order_by('-created_at')
+    connections = list(PeerConnection.objects.filter(user=request.user).select_related('peer', 'peer__profile').order_by('-created_at'))
     
     today = timezone.now().date()
-    peers_data = []
+    peer_ids = [conn.peer_id for conn in connections]
 
+    # 1. Batch fetch today's attendance for all connected peers
+    attendance_map = {}
+    if peer_ids:
+        attendances = Attendance.objects.filter(user_id__in=peer_ids, date=today)
+        for att in attendances:
+            attendance_map[att.user_id] = att
+
+    # 2. Batch fetch today's todo counts for all connected peers
+    todos_map = {}
+    if peer_ids:
+        todo_aggregates = Todo.objects.filter(user_id__in=peer_ids, date=today).values('user_id').annotate(
+            total=Count('id'),
+            completed=Count('id', filter=Q(is_completed=True))
+        )
+        for item in todo_aggregates:
+            todos_map[item['user_id']] = {
+                'total': item['total'],
+                'completed': item['completed']
+            }
+
+    peers_data = []
     for conn in connections:
         u = conn.peer
         p = getattr(u, 'profile', None)
@@ -88,16 +111,12 @@ def get_group_status(request):
             except Exception:
                 avatar_url = None
         
-        # Check today's attendance status
-        att = Attendance.objects.filter(user=u, date=today).first()
+        att = attendance_map.get(u.id)
         is_active = bool(att and att.is_active)
         is_break = bool(att and att.current_break_start)
         has_ended = bool(att and att.end_time and not is_active)
 
-        # Todo counts
-        todos_qs = Todo.objects.filter(user=u, date=today)
-        total_todos = todos_qs.count()
-        completed_todos = todos_qs.filter(is_completed=True).count()
+        todo_stat = todos_map.get(u.id, {'total': 0, 'completed': 0})
 
         peers_data.append({
             'id': u.id,
@@ -110,8 +129,8 @@ def get_group_status(request):
             'is_active': is_active,
             'is_break': is_break,
             'has_ended': has_ended,
-            'total_todos': total_todos,
-            'completed_todos': completed_todos,
+            'total_todos': todo_stat['total'],
+            'completed_todos': todo_stat['completed'],
             'connected_at': conn.created_at.isoformat(),
         })
 

@@ -1,12 +1,15 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .models import DailyPerformance
 from attendance.models import Attendance
 from todos.models import Todo
 from django.utils import timezone
+from django.db.models import Count, Q
 import datetime
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def analytics_data(request):
     year = request.GET.get('year')
     now = timezone.now()
@@ -29,7 +32,6 @@ def analytics_data(request):
     start_date = datetime.date(target_year, 1, 1)
     end_date = datetime.date(target_year, 12, 31)
     performances = DailyPerformance.objects.filter(user=request.user, date__range=(start_date, end_date))
-    from django.db.models import Count, Q
     todos = Todo.objects.filter(user=request.user, date__range=(start_date, end_date)) \
         .values('date') \
         .annotate(
@@ -59,6 +61,32 @@ def analytics_data(request):
             }
         data_map[date_str]['total_tasks'] = item['total']
         data_map[date_str]['tasks_completed'] = item['completed']
+
+    # Include live today's attendance calculation so active work reflects immediately in heatmap & stats
+    today = now.date()
+    if today.year == target_year:
+        today_str = today.isoformat()
+        today_att = Attendance.objects.filter(user=request.user, date=today).first()
+        if today_att:
+            live_hours = 0.0
+            if today_att.is_active and today_att.start_time:
+                active_break = (now - today_att.current_break_start).total_seconds() if today_att.current_break_start else 0
+                accum_break = today_att.total_break_duration.total_seconds() + active_break
+                elapsed = max(0, (now - today_att.start_time).total_seconds())
+                net_seconds = max(0, elapsed - accum_break)
+                live_hours = round(net_seconds / 3600.0, 2)
+            elif today_att.duration:
+                live_hours = round(today_att.duration.total_seconds() / 3600.0, 2)
+
+            if today_str not in data_map:
+                data_map[today_str] = {
+                    'date': today_str,
+                    'hours': live_hours,
+                    'tasks_completed': 0,
+                    'total_tasks': 0
+                }
+            else:
+                data_map[today_str]['hours'] = max(data_map[today_str]['hours'], live_hours)
 
     data = list(data_map.values())
     return Response({'status': 'success', 'data': data, 'years': available_years, 'selected_year': target_year})

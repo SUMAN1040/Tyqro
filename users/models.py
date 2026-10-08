@@ -22,6 +22,7 @@ class UserProfile(models.Model):
     otp_code = models.CharField(max_length=6, null=True, blank=True)
     otp_purpose = models.CharField(max_length=50, null=True, blank=True)
     otp_pending_email = models.EmailField(null=True, blank=True)
+    otp_created_at = models.DateTimeField(null=True, blank=True)
     study_code = models.CharField(max_length=16, unique=True, null=True, blank=True, db_index=True)
 
     def get_or_create_study_code(self):

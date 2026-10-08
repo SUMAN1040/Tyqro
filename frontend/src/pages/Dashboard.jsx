@@ -43,7 +43,8 @@ export default function Dashboard({ user }) {
     // Todo states
     const [todos, setTodos] = useState([]);
     const [newTodo, setNewTodo] = useState('');
-    const [todoLoading, setTodoLoading] = useState(false);
+    const pendingDeletesRef = useRef(new Set());
+    const pendingTogglesRef = useRef(new Map());
 
     // Heatmap / Stats states
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -152,12 +153,10 @@ export default function Dashboard({ user }) {
         const interval = setInterval(() => {
             const now = new Date();
             
-            // 1. Update Analog Clock hands (based on IST)
-            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-            const ist = new Date(utc + (3600000 * 5.5));
-            const sec = ist.getSeconds();
-            const min = ist.getMinutes();
-            const hr = ist.getHours();
+            // 1. Update Analog Clock hands (based on local user time)
+            const sec = now.getSeconds();
+            const min = now.getMinutes();
+            const hr = now.getHours();
             setClockAngles({
                 hour: ((hr % 12) * 30) + (min * 0.5) - 90,
                 minute: (min * 6) - 90,
@@ -431,10 +430,27 @@ export default function Dashboard({ user }) {
         try {
             const res = await API.post('/api/todos/add/', { title: trimmedTitle });
             if (res.data?.todo) {
-                // Replace optimistic task with authoritative record from backend
-                setTodos((prev) => prev.map((t) => (t.id === tempId ? res.data.todo : t)));
+                const realTodo = res.data.todo;
+                // If user deleted this task while creation was in-flight:
+                if (pendingDeletesRef.current.has(tempId)) {
+                    pendingDeletesRef.current.delete(tempId);
+                    // Silently delete from server now that we have the real ID
+                    API.post(`/api/todos/delete/${realTodo.id}/`).catch(() => {});
+                } else {
+                    // Check if user toggled this task while creation was in-flight:
+                    if (pendingTogglesRef.current.has(tempId)) {
+                        const desiredCompleted = pendingTogglesRef.current.get(tempId);
+                        pendingTogglesRef.current.delete(tempId);
+                        realTodo.is_completed = desiredCompleted;
+                        API.post(`/api/todos/toggle/${realTodo.id}/`).catch(() => {});
+                    }
+                    // Replace optimistic task with authoritative record from backend
+                    setTodos((prev) => prev.map((t) => (t.id === tempId ? realTodo : t)));
+                }
             }
         } catch (err) {
+            pendingDeletesRef.current.delete(tempId);
+            pendingTogglesRef.current.delete(tempId);
             // Revert state on failure
             setTodos((prev) => prev.filter((t) => t.id !== tempId));
             alert(err.response?.data?.error || 'Failed to add task.');
@@ -443,9 +459,22 @@ export default function Dashboard({ user }) {
 
     const handleToggleTodo = async (id) => {
         // Optimistically flip checkbox state immediately
+        let newStatus = false;
         setTodos((prev) =>
-            prev.map((t) => (t.id === id ? { ...t, is_completed: !t.is_completed } : t))
+            prev.map((t) => {
+                if (t.id === id) {
+                    newStatus = !t.is_completed;
+                    return { ...t, is_completed: newStatus };
+                }
+                return t;
+            })
         );
+
+        // If task was just created and is still waiting for backend ID:
+        if (typeof id === 'string' && id.startsWith('temp-')) {
+            pendingTogglesRef.current.set(id, newStatus);
+            return;
+        }
 
         try {
             const res = await API.post(`/api/todos/toggle/${id}/`);
@@ -469,6 +498,12 @@ export default function Dashboard({ user }) {
 
         // Optimistically remove from list immediately
         setTodos((prev) => prev.filter((t) => t.id !== id));
+
+        // If the task was just added and is still waiting for server ID:
+        if (typeof id === 'string' && id.startsWith('temp-')) {
+            pendingDeletesRef.current.add(id);
+            return;
+        }
 
         try {
             await API.post(`/api/todos/delete/${id}/`);

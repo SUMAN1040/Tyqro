@@ -1,5 +1,6 @@
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.utils import timezone
 import datetime
@@ -8,6 +9,7 @@ from .serializers import TodoSerializer
 from attendance.models import Attendance
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def todo_list(request):
     date_str = request.GET.get('date')
     if date_str:
@@ -23,6 +25,7 @@ def todo_list(request):
     return Response({'todos': serializer.data})
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def add_todo(request):
     title = request.data.get('title')
     if not title:
@@ -39,6 +42,7 @@ def add_todo(request):
     return Response({'status': 'success', 'todo': serializer.data}, status=status.HTTP_201_CREATED)
 
 @api_view(['POST', 'PATCH'])
+@permission_classes([IsAuthenticated])
 def toggle_todo(request, todo_id):
     # Can only toggle todos if the work session is active
     if not Attendance.objects.filter(user=request.user, is_active=True).exists():
@@ -53,6 +57,7 @@ def toggle_todo(request, todo_id):
         return Response({'error': 'Todo not found.'}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['DELETE', 'POST'])
+@permission_classes([IsAuthenticated])
 def delete_todo(request, todo_id):
     # Cannot delete tasks after ending work for today
     today = timezone.now().date()

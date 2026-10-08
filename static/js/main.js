@@ -608,12 +608,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    const pendingDeletes = new Set();
+    const pendingToggles = new Map();
+
     function toggleTodo(id) {
         const todo = todos.find(t => t.id == id);
         if (!todo) return;
         const originalStatus = todo.is_completed;
         todo.is_completed = !originalStatus;
         renderTodos();
+
+        if (typeof id === 'string' && id.startsWith('temp-')) {
+            pendingToggles.set(id, todo.is_completed);
+            return;
+        }
 
         fetchAPI(`/todos/toggle/${id}/`, 'POST').then(res => {
             if (res.status === 'success') {
@@ -635,6 +643,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const deletedTodo = todos[todoIndex];
         todos.splice(todoIndex, 1);
         renderTodos();
+
+        if (typeof id === 'string' && id.startsWith('temp-')) {
+            pendingDeletes.add(id);
+            return;
+        }
 
         fetchAPI(`/todos/delete/${id}/`, 'POST').then(res => {
             if (res.status !== 'success') {
@@ -665,9 +678,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 fetchAPI('/todos/add/', 'POST', { title }).then(res => {
                     if (res.status === 'success' && res.todo) {
-                        const idx = todos.findIndex(t => t.id === tempId);
-                        if (idx !== -1) todos[idx] = res.todo;
-                        renderTodos();
+                        if (pendingDeletes.has(tempId)) {
+                            pendingDeletes.delete(tempId);
+                            fetchAPI(`/todos/delete/${res.todo.id}/`, 'POST').catch(() => {});
+                        } else {
+                            if (pendingToggles.has(tempId)) {
+                                res.todo.is_completed = pendingToggles.get(tempId);
+                                pendingToggles.delete(tempId);
+                                fetchAPI(`/todos/toggle/${res.todo.id}/`, 'POST').catch(() => {});
+                            }
+                            const idx = todos.findIndex(t => t.id === tempId);
+                            if (idx !== -1) todos[idx] = res.todo;
+                            renderTodos();
+                        }
                     } else {
                         todos = todos.filter(t => t.id !== tempId);
                         renderTodos();
