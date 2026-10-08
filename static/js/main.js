@@ -609,21 +609,41 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function toggleTodo(id) {
+        const todo = todos.find(t => t.id == id);
+        if (!todo) return;
+        const originalStatus = todo.is_completed;
+        todo.is_completed = !originalStatus;
+        renderTodos();
+
         fetchAPI(`/todos/toggle/${id}/`, 'POST').then(res => {
             if (res.status === 'success') {
-                const todo = todos.find(t => t.id == id);
-                if (todo) todo.is_completed = res.is_completed;
+                todo.is_completed = res.is_completed;
+                renderTodos();
+            } else {
+                todo.is_completed = originalStatus;
                 renderTodos();
             }
+        }).catch(() => {
+            todo.is_completed = originalStatus;
+            renderTodos();
         });
     };
 
     function deleteTodo(id) {
+        const todoIndex = todos.findIndex(t => t.id == id);
+        if (todoIndex === -1) return;
+        const deletedTodo = todos[todoIndex];
+        todos.splice(todoIndex, 1);
+        renderTodos();
+
         fetchAPI(`/todos/delete/${id}/`, 'POST').then(res => {
-            if (res.status === 'success') {
-                todos = todos.filter(t => t.id != id);
+            if (res.status !== 'success') {
+                todos.splice(todoIndex, 0, deletedTodo);
                 renderTodos();
             }
+        }).catch(() => {
+            todos.splice(todoIndex, 0, deletedTodo);
+            renderTodos();
         });
     };
 
@@ -637,12 +657,24 @@ document.addEventListener('DOMContentLoaded', () => {
         addTodoBtn.addEventListener('click', () => {
             const title = newTodoInput.value.trim();
             if (title) {
+                const tempId = 'temp-' + Date.now();
+                const optimisticTodo = { id: tempId, title: title, is_completed: false };
+                todos.push(optimisticTodo);
+                newTodoInput.value = '';
+                renderTodos();
+
                 fetchAPI('/todos/add/', 'POST', { title }).then(res => {
-                    if (res.status === 'success') {
-                        todos.push(res.todo);
-                        newTodoInput.value = '';
+                    if (res.status === 'success' && res.todo) {
+                        const idx = todos.findIndex(t => t.id === tempId);
+                        if (idx !== -1) todos[idx] = res.todo;
+                        renderTodos();
+                    } else {
+                        todos = todos.filter(t => t.id !== tempId);
                         renderTodos();
                     }
+                }).catch(() => {
+                    todos = todos.filter(t => t.id !== tempId);
+                    renderTodos();
                 });
             }
         });

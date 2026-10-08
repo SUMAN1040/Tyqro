@@ -412,34 +412,69 @@ export default function Dashboard({ user }) {
     // Todo Actions
     const handleAddTodo = async (e) => {
         e.preventDefault();
-        if (!newTodo.trim()) return;
-        setTodoLoading(true);
+        const trimmedTitle = newTodo.trim();
+        if (!trimmedTitle) return;
+
+        const tempId = `temp-${Date.now()}`;
+        const optimisticTodo = {
+            id: tempId,
+            title: trimmedTitle,
+            is_completed: false,
+            date: new Date().toLocaleDateString('en-CA'),
+            created_at: new Date().toISOString()
+        };
+
+        // Instantly update UI and reset input for zero-latency user experience
+        setTodos((prev) => [...prev, optimisticTodo]);
+        setNewTodo('');
 
         try {
-            await API.post('/api/todos/add/', { title: newTodo.trim() });
-            setNewTodo('');
-            fetchStatusAndTodos();
+            const res = await API.post('/api/todos/add/', { title: trimmedTitle });
+            if (res.data?.todo) {
+                // Replace optimistic task with authoritative record from backend
+                setTodos((prev) => prev.map((t) => (t.id === tempId ? res.data.todo : t)));
+            }
         } catch (err) {
+            // Revert state on failure
+            setTodos((prev) => prev.filter((t) => t.id !== tempId));
             alert(err.response?.data?.error || 'Failed to add task.');
-        } finally {
-            setTodoLoading(false);
         }
     };
 
     const handleToggleTodo = async (id) => {
+        // Optimistically flip checkbox state immediately
+        setTodos((prev) =>
+            prev.map((t) => (t.id === id ? { ...t, is_completed: !t.is_completed } : t))
+        );
+
         try {
-            await API.post(`/api/todos/toggle/${id}/`);
-            fetchStatusAndTodos();
+            const res = await API.post(`/api/todos/toggle/${id}/`);
+            if (res.data?.status === 'success' && typeof res.data.is_completed === 'boolean') {
+                setTodos((prev) =>
+                    prev.map((t) => (t.id === id ? { ...t, is_completed: res.data.is_completed } : t))
+                );
+            }
         } catch (err) {
+            // Roll back to previous state on failure
+            setTodos((prev) =>
+                prev.map((t) => (t.id === id ? { ...t, is_completed: !t.is_completed } : t))
+            );
             alert(err.response?.data?.error || 'Failed to toggle task.');
         }
     };
 
     const handleDeleteTodo = async (id) => {
+        const todoToDelete = todos.find((t) => t.id === id);
+        if (!todoToDelete) return;
+
+        // Optimistically remove from list immediately
+        setTodos((prev) => prev.filter((t) => t.id !== id));
+
         try {
             await API.post(`/api/todos/delete/${id}/`);
-            fetchStatusAndTodos();
         } catch (err) {
+            // Revert on error
+            setTodos((prev) => [...prev, todoToDelete]);
             alert(err.response?.data?.error || 'Failed to delete task.');
         }
     };
@@ -619,7 +654,7 @@ export default function Dashboard({ user }) {
                         onChange={(e) => setNewTodo(e.target.value)}
                         disabled={isActive || endTime}
                     />
-                    <button type="submit" className="btn btn-primary rounded-end-pill px-4" disabled={todoLoading || isActive || endTime}>
+                    <button type="submit" className="btn btn-primary rounded-end-pill px-4" disabled={isActive || endTime}>
                         Add
                     </button>
                 </form>
