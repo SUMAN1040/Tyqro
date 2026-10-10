@@ -76,7 +76,6 @@ export default function AppLayout({ user, onLogout, onUpdateUser, children }) {
             formData.append('avatar', avatarFile);
         }
 
-        
         try {
             const res = await API.post('/api/auth/profile/update/', formData, {
                 headers: {

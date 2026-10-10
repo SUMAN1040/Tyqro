@@ -201,8 +201,16 @@ export default function Dashboard({ user }) {
                     const endTimeStr = user?.profile?.work_end_time;
                     if (endTimeStr) {
                         const [eh, em] = endTimeStr.split(':').map(Number);
-                        const endLimit = new Date();
-                        endLimit.setHours(eh, em, 0, 0);
+                        const endLimit = startTime ? new Date(startTime) : new Date();
+                        endLimit.setHours(eh, em || 0, 0, 0);
+                        if (startTime && endLimit <= startTime) {
+                            endLimit.setDate(endLimit.getDate() + 1);
+                        } else if (!startTime) {
+                            const [sh, sm] = (user?.profile?.work_start_time || '09:00').split(':').map(Number);
+                            if (eh < sh || (eh === sh && (em || 0) <= (sm || 0))) {
+                                endLimit.setDate(endLimit.getDate() + 1);
+                            }
+                        }
                         if (now >= endLimit) {
                             autoEndAttempted.current = true;
                             API.post('/api/attendance/end/', {})
@@ -314,8 +322,16 @@ export default function Dashboard({ user }) {
             // Fixed Mode: check if before end_time
             const endTimeStr = user.profile.work_end_time;
             const [eh, em] = endTimeStr.split(':').map(Number);
-            const endLimit = new Date();
-            endLimit.setHours(eh, em, 0, 0);
+            const endLimit = startTime ? new Date(startTime) : new Date();
+            endLimit.setHours(eh, em || 0, 0, 0);
+            if (startTime && endLimit <= startTime) {
+                endLimit.setDate(endLimit.getDate() + 1);
+            } else if (!startTime) {
+                const [sh, sm] = (user?.profile?.work_start_time || '09:00').split(':').map(Number);
+                if (eh < sh || (eh === sh && (em || 0) <= (sm || 0))) {
+                    endLimit.setDate(endLimit.getDate() + 1);
+                }
+            }
             if (now < endLimit) {
                 early = true;
             }
