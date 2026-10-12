@@ -783,7 +783,6 @@ export default function Dashboard({ user }) {
                                         <div style={{ height: '14px', lineHeight: '14px' }}>Sat</div>
                                     </div>
                                     
-                                    
                                     <div className="flex-grow-1 overflow-auto">
                                         <div className="heatmap-container d-flex align-items-start" style={{ gap: '16px' }}>
                                             {renderHeatmapGrid()}
