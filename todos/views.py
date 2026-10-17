@@ -50,19 +50,31 @@ def toggle_todo(request, todo_id):
 
     try:
         todo = Todo.objects.get(id=todo_id, user=request.user)
-        todo.is_completed = not todo.is_completed
+        # If task is already completed, unchecking requires a minimum 10-word explanation
+        if todo.is_completed:
+            reason = request.data.get('reason', '').strip()
+            word_count = len([w for w in reason.split() if w])
+            if word_count < 10:
+                return Response({
+                    'error': f'A minimum 10-word reason is required to uncheck a completed task. You provided {word_count} words.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            todo.uncheck_reason = reason
+            todo.is_completed = False
+        else:
+            todo.is_completed = True
         todo.save()
-        return Response({'status': 'success', 'is_completed': todo.is_completed})
+        return Response({'status': 'success', 'is_completed': todo.is_completed, 'uncheck_reason': todo.uncheck_reason})
     except Todo.DoesNotExist:
         return Response({'error': 'Todo not found.'}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['DELETE', 'POST'])
 @permission_classes([IsAuthenticated])
 def delete_todo(request, todo_id):
-    # Cannot delete tasks after ending work for today
+    # Cannot delete tasks after starting or ending work for today
     today = timezone.now().date()
-    if Attendance.objects.filter(user=request.user, date=today, is_active=False, end_time__isnull=False).exists():
-        return Response({'error': 'Cannot delete tasks after ending work.'}, status=status.HTTP_400_BAD_REQUEST)
+    attendance = Attendance.objects.filter(user=request.user, date=today).first()
+    if attendance and attendance.start_time:
+        return Response({'error': 'Cannot delete tasks after starting work.'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         todo = Todo.objects.get(id=todo_id, user=request.user)

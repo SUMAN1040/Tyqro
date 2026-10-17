@@ -178,19 +178,20 @@ input:focus {
     z-index: 10;
 }
 [data-bs-theme="dark"] .heatmap-cell {
-    background-color: #2d333b;
+    background-color: #272a2e;
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* Heatmap colors based on points */
-.level-1 { background-color: #c6e48b; }
-.level-2 { background-color: #7bc96f; }
-.level-3 { background-color: #239a3b; }
-.level-4 { background-color: #196127; }
+.level-1 { background-color: #bbf7d0; }
+.level-2 { background-color: #86efac; }
+.level-3 { background-color: #4ade80; }
+.level-4 { background-color: #16a34a; }
 
-[data-bs-theme="dark"] .level-1 { background-color: #0e4429; }
-[data-bs-theme="dark"] .level-2 { background-color: #006d32; }
-[data-bs-theme="dark"] .level-3 { background-color: #26a641; }
-[data-bs-theme="dark"] .level-4 { background-color: #39d353; }
+[data-bs-theme="dark"] .level-1 { background-color: #064e3b; }
+[data-bs-theme="dark"] .level-2 { background-color: #047857; }
+[data-bs-theme="dark"] .level-3 { background-color: #10b981; }
+[data-bs-theme="dark"] .level-4 { background-color: #22c55e; }
 
 /* Analog Clock */
 .analog-clock {
@@ -357,5 +358,152 @@ input:focus {
 }
 [data-bs-theme="dark"] .peer-todo-item:hover {
     background-color: rgba(255,255,255,0.03);
+}
+
+/* ==========================================================================
+   Analytics Round Switch & Chart Visualizations
+   ========================================================================== */
+
+/* Round Toggle Switch */
+.round-toggle-switch {
+    width: 46px;
+    height: 25px;
+    background-color: #cbd5e1;
+    border-radius: 999px;
+    border: none;
+    position: relative;
+    cursor: pointer;
+    padding: 2.5px;
+    transition: background-color 0.25s ease, box-shadow 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+}
+
+[data-bs-theme="dark"] .round-toggle-switch {
+    background-color: #374151;
+}
+
+.round-toggle-switch:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(94, 106, 210, 0.35);
+}
+
+.round-toggle-switch.active {
+    background-color: var(--primary-color);
+}
+
+.round-toggle-knob {
+    width: 20px;
+    height: 20px;
+    background-color: #ffffff;
+    border-radius: 50%;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+    color: #4b5563;
+}
+
+.round-toggle-switch.active .round-toggle-knob {
+    transform: translateX(21px);
+    color: var(--primary-color);
+}
+
+/* Visualization Mode Switcher Pill Container */
+.viz-switcher-wrapper {
+    background: rgba(0, 0, 0, 0.04);
+    border: 1px solid var(--border-color);
+    padding: 3px 10px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+[data-bs-theme="dark"] .viz-switcher-wrapper {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Graph Range Pills */
+.graph-range-pill {
+    font-size: 0.76rem;
+    font-weight: 600;
+    padding: 0.32rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-color);
+    opacity: 0.7;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+
+.graph-range-pill:hover {
+    opacity: 1;
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.graph-range-pill.active {
+    opacity: 1;
+    background: var(--primary-color);
+    color: #ffffff !important;
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 6px rgba(94, 106, 210, 0.3);
+}
+
+[data-bs-theme="dark"] .graph-range-pill {
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Custom Date Range Picker */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.65;
+    transition: opacity 0.2s ease;
+}
+
+input[type="date"]:hover::-webkit-calendar-picker-indicator {
+    opacity: 1;
+}
+
+[data-bs-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
+
+/* Analytics Chart Container */
+.analytics-chart-wrapper {
+    position: relative;
+    width: 100%;
+    height: 320px;
+    max-height: 350px;
+}
+
+.chart-legend-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.04);
+    border: 1px solid var(--border-color);
+}
+
+[data-bs-theme="dark"] .chart-legend-badge {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.chart-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
 }
 

@@ -236,6 +236,7 @@ def get_peer_data(request, peer_id):
         'id': t.id,
         'title': t.title,
         'is_completed': t.is_completed,
+        'uncheck_reason': t.uncheck_reason,
         'created_at': t.created_at.isoformat()
     } for t in todos]
 

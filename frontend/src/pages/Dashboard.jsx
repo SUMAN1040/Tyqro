@@ -1,7 +1,28 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { API } from '../api';
 import GroupStudyModal from '../components/GroupStudyModal';
 import GroupStudyPeerPanel from '../components/GroupStudyPeerPanel';
+import WorkSummaryModal from '../components/WorkSummaryModal';
+import { generateWorkSummaryPDF } from '../utils/pdfGenerator';
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend
+} from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend
+);
 
 const CLOCK_MARKERS = (() => {
     const list = [];
@@ -48,10 +69,33 @@ export default function Dashboard({ user }) {
 
     // Heatmap / Stats states
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-    const [heatmapData, setHeatmapData] = useState([]);
     const [availableYears, setAvailableYears] = useState([new Date().getFullYear()]);
     const [dataMap, setDataMap] = useState({});
-    const [selectedDateStats, setSelectedDateStats] = useState({ date: 'Today', hours: 0, completed: 0, total: 0 });
+    const [selectedDateStats, setSelectedDateStats] = useState({ date: 'Today', hours: 0, breakHours: 0, breakSeconds: 0, completed: 0, total: 0 });
+    
+    // Visualization Toggle & Graph states
+    const [vizMode, setVizMode] = useState('heatmap'); // 'heatmap' | 'graph'
+    const [graphRange, setGraphRange] = useState('month'); // '7d' | '14d' | 'month' | 'custom'
+    const [customStartDate, setCustomStartDate] = useState(() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 13);
+        return d.toLocaleDateString('en-CA');
+    });
+    const [customEndDate, setCustomEndDate] = useState(() => new Date().toLocaleDateString('en-CA'));
+    const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.getAttribute('data-bs-theme') === 'dark');
+
+    const handleCustomDateChange = (type, val) => {
+        if (!val) return;
+        if (type === 'start') {
+            setCustomStartDate(val);
+        } else {
+            setCustomEndDate(val);
+        }
+        const year = new Date(val).getFullYear();
+        if (year && year !== selectedYear) {
+            fetchHeatmap(year);
+        }
+    };
 
     // Group study states
     const [groupStatus, setGroupStatus] = useState({ in_group: false, members: [], count: 0, max_members: 10 });
@@ -65,6 +109,19 @@ export default function Dashboard({ user }) {
     const [reasonError, setReasonError] = useState('');
     const [showConfirmStart, setShowConfirmStart] = useState(false);
     const autoEndAttempted = useRef(false);
+
+    // Uncheck Task Reason states
+    const [showUncheckModal, setShowUncheckModal] = useState(false);
+    const [uncheckTodoTarget, setUncheckTodoTarget] = useState(null);
+    const [uncheckReason, setUncheckReason] = useState('');
+    const [uncheckError, setUncheckError] = useState('');
+
+    // Work Summary states
+    const [summaryData, setSummaryData] = useState(null);
+    const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+    const [showSummaryModal, setShowSummaryModal] = useState(false);
+    const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+    const [summaryError, setSummaryError] = useState('');
 
     // Fetch Group Status
     const fetchGroupStatus = async () => {
@@ -112,15 +169,16 @@ export default function Dashboard({ user }) {
     const fetchHeatmap = async (year) => {
         try {
             const res = await API.get(`/api/analytics/data/?year=${year}`);
-            setHeatmapData(res.data.data);
             setAvailableYears(res.data.years);
             setSelectedYear(res.data.selected_year);
 
-            const map = {};
-            res.data.data.forEach((d) => {
-                map[d.date] = d;
+            setDataMap((prev) => {
+                const map = { ...prev };
+                res.data.data.forEach((d) => {
+                    map[d.date] = d;
+                });
+                return map;
             });
-            setDataMap(map);
 
             // Default to today
             const todayStr = new Date().toLocaleDateString('en-CA');
@@ -128,6 +186,8 @@ export default function Dashboard({ user }) {
             setSelectedDateStats({
                 date: 'Today',
                 hours: dayData ? dayData.hours : 0.0,
+                breakHours: dayData ? (dayData.break_hours || 0.0) : 0.0,
+                breakSeconds: dayData ? (dayData.break_seconds || 0) : 0,
                 completed: dayData ? dayData.tasks_completed : 0,
                 total: dayData ? dayData.total_tasks : 0
             });
@@ -135,6 +195,15 @@ export default function Dashboard({ user }) {
             console.error('Failed to load heatmap data:', err);
         }
     };
+
+    // Dark mode observer for chart theme synchronization
+    useEffect(() => {
+        const observer = new MutationObserver(() => {
+            setIsDarkMode(document.documentElement.getAttribute('data-bs-theme') === 'dark');
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+        return () => observer.disconnect();
+    }, []);
 
     useEffect(() => {
         const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -344,31 +413,11 @@ export default function Dashboard({ user }) {
             }
         }
 
-        if (early) {
-            setReasonType('early');
-            setReasonText('');
-            setShowReasonModal(true);
-        } else {
-            proceedEndWork();
-        }
+        setReasonType(early ? 'early' : 'end');
+        setReasonText('');
+        setShowReasonModal(true);
     };
 
-    const proceedEndWork = async () => {
-        // Optimistic UI update: stop session immediately
-        const optimisticEnd = new Date();
-        setIsActive(false);
-        setIsBreak(false);
-        setEndTime(optimisticEnd);
-
-        try {
-            const res = await API.post('/api/attendance/end/', {});
-            applyAttendanceStatus(res.data);
-            fetchHeatmap(selectedYear);
-        } catch (err) {
-            fetchStatusAndTodos();
-            alert(err.response?.data?.message || err.response?.data?.error || 'Failed to end work.');
-        }
-    };
 
     const handleEndWorkWithReason = async () => {
         if (countWords(reasonText) < 15) {
@@ -381,15 +430,53 @@ export default function Dashboard({ user }) {
         setIsActive(false);
         setIsBreak(false);
         setEndTime(optimisticEnd);
+        setSummaryData(null);
 
         try {
-            const res = await API.post('/api/attendance/end/', { early_leave_reason: reasonText });
+            const res = await API.post('/api/attendance/end/', { 
+                early_leave_reason: reasonText,
+                end_reason: reasonText 
+            });
             applyAttendanceStatus(res.data);
             fetchHeatmap(selectedYear);
         } catch (err) {
             fetchStatusAndTodos();
             setShowReasonModal(true);
             setReasonError(err.response?.data?.message || err.response?.data?.error || 'Failed to end work.');
+        }
+    };
+
+    const handleGenerateSummary = async () => {
+        setIsGeneratingSummary(true);
+        setSummaryError('');
+        try {
+            const res = await API.get('/api/attendance/summary/');
+            setSummaryData(res.data);
+            setShowSummaryModal(true);
+        } catch (err) {
+            console.error('Failed to generate work summary:', err);
+            setSummaryError(err.response?.data?.message || err.response?.data?.error || 'Failed to generate summary.');
+        } finally {
+            setIsGeneratingSummary(false);
+        }
+    };
+
+    const handleDownloadSummaryPDF = async () => {
+        setIsDownloadingPdf(true);
+        try {
+            const res = await API.get('/api/attendance/summary/');
+            const freshData = res.data;
+            setSummaryData(freshData);
+            await generateWorkSummaryPDF(freshData);
+        } catch (err) {
+            console.error('Failed to export PDF summary:', err);
+            if (summaryData) {
+                await generateWorkSummaryPDF(summaryData);
+            } else {
+                alert('Could not download PDF summary. Please try again.');
+            }
+        } finally {
+            setIsDownloadingPdf(false);
         }
     };
 
@@ -473,17 +560,27 @@ export default function Dashboard({ user }) {
         }
     };
 
-    const handleToggleTodo = async (id) => {
-        // Optimistically flip checkbox state immediately
-        let newStatus = false;
+    const handleToggleTodo = (id) => {
+        const targetTodo = todos.find((t) => t.id === id);
+        if (!targetTodo) return;
+
+        // If task is already completed, user cannot directly uncheck it without a 10-word reason
+        if (targetTodo.is_completed) {
+            setUncheckTodoTarget(targetTodo);
+            setUncheckReason('');
+            setUncheckError('');
+            setShowUncheckModal(true);
+            return;
+        }
+
+        // Checking an incomplete task proceeds immediately
+        proceedToggleTodo(id, true);
+    };
+
+    const proceedToggleTodo = async (id, newStatus, reason = '') => {
+        // Optimistically update checkbox state immediately
         setTodos((prev) =>
-            prev.map((t) => {
-                if (t.id === id) {
-                    newStatus = !t.is_completed;
-                    return { ...t, is_completed: newStatus };
-                }
-                return t;
-            })
+            prev.map((t) => (t.id === id ? { ...t, is_completed: newStatus } : t))
         );
 
         // If task was just created and is still waiting for backend ID:
@@ -493,22 +590,49 @@ export default function Dashboard({ user }) {
         }
 
         try {
-            const res = await API.post(`/api/todos/toggle/${id}/`);
+            const payload = reason ? { reason } : {};
+            const res = await API.post(`/api/todos/toggle/${id}/`, payload);
             if (res.data?.status === 'success' && typeof res.data.is_completed === 'boolean') {
                 setTodos((prev) =>
                     prev.map((t) => (t.id === id ? { ...t, is_completed: res.data.is_completed } : t))
                 );
+                // Synchronize heatmap and daily stats
+                fetchHeatmap(selectedYear);
             }
         } catch (err) {
             // Roll back to previous state on failure
             setTodos((prev) =>
-                prev.map((t) => (t.id === id ? { ...t, is_completed: !t.is_completed } : t))
+                prev.map((t) => (t.id === id ? { ...t, is_completed: !newStatus } : t))
             );
             alert(err.response?.data?.error || 'Failed to toggle task.');
         }
     };
 
+    const handleConfirmUncheck = async () => {
+        if (!uncheckTodoTarget) return;
+        const words = countWords(uncheckReason);
+        if (words < 10) {
+            setUncheckError(`A minimum 10-word reason is required. You provided ${words} word${words === 1 ? '' : 's'}.`);
+            return;
+        }
+
+        const targetId = uncheckTodoTarget.id;
+        const reason = uncheckReason.trim();
+
+        setShowUncheckModal(false);
+        setUncheckTodoTarget(null);
+        setUncheckReason('');
+        setUncheckError('');
+
+        await proceedToggleTodo(targetId, false, reason);
+    };
+
     const handleDeleteTodo = async (id) => {
+        if (isActive || startTime || endTime) {
+            alert('Cannot delete tasks once work has started.');
+            return;
+        }
+
         const todoToDelete = todos.find((t) => t.id === id);
         if (!todoToDelete) return;
 
@@ -523,6 +647,7 @@ export default function Dashboard({ user }) {
 
         try {
             await API.post(`/api/todos/delete/${id}/`);
+            fetchHeatmap(selectedYear);
         } catch (err) {
             // Revert on error
             setTodos((prev) => [...prev, todoToDelete]);
@@ -591,6 +716,8 @@ export default function Dashboard({ user }) {
                                     setSelectedDateStats({
                                         date: dateStr,
                                         hours: dayData ? dayData.hours : 0.0,
+                                        breakHours: dayData ? (dayData.break_hours || 0.0) : 0.0,
+                                        breakSeconds: dayData ? (dayData.break_seconds || 0) : 0,
                                         completed: dayData ? dayData.tasks_completed : 0,
                                         total: dayData ? dayData.total_tasks : 0
                                     });
@@ -658,19 +785,69 @@ export default function Dashboard({ user }) {
                     </div>
                 )}
 
-                <div className="d-flex gap-2 w-100 mb-3">
+                <div className="d-flex flex-column gap-2 w-100 mb-3">
                     {!isActive && !endTime ? (
-                        <button className="btn btn-primary flex-grow-1 py-2 fw-medium rounded-pill" onClick={handleStartWorkClick}>
+                        <button className="btn btn-primary w-100 py-2 fw-medium rounded-pill" onClick={handleStartWorkClick}>
                             Start Work
                         </button>
                     ) : isActive ? (
-                        <button className="btn btn-outline-danger flex-grow-1 py-2 fw-medium rounded-pill" onClick={handleEndWorkClick}>
+                        <button className="btn btn-outline-danger w-100 py-2 fw-medium rounded-pill" onClick={handleEndWorkClick}>
                             End Work
                         </button>
                     ) : (
-                        <button className="btn btn-secondary flex-grow-1 py-2 fw-medium rounded-pill" disabled>
-                            Shift Ended
-                        </button>
+                        <>
+                            <button className="btn btn-secondary w-100 py-2 fw-medium rounded-pill opacity-75" disabled>
+                                <i className="bi bi-check-circle-fill me-1"></i> Shift Ended
+                            </button>
+
+                            {!summaryData ? (
+                                <button 
+                                    className="btn btn-primary w-100 py-2.5 fw-semibold rounded-pill d-flex align-items-center justify-content-center gap-2 shadow-sm"
+                                    onClick={handleGenerateSummary}
+                                    disabled={isGeneratingSummary}
+                                >
+                                    {isGeneratingSummary ? (
+                                        <>
+                                            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                            Generating Summary...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <i className="bi bi-file-earmark-text-fill"></i>
+                                            Generate Summary
+                                        </>
+                                    )}
+                                </button>
+                            ) : (
+                                <div className="d-flex gap-2 w-100">
+                                    <button 
+                                        className="btn btn-outline-primary flex-grow-1 py-2 fw-medium rounded-pill d-flex align-items-center justify-content-center gap-1.5 shadow-sm"
+                                        onClick={() => setShowSummaryModal(true)}
+                                    >
+                                        <i className="bi bi-eye-fill"></i>
+                                        View
+                                    </button>
+                                    <button 
+                                        className="btn btn-success flex-grow-1 py-2 fw-medium rounded-pill d-flex align-items-center justify-content-center gap-1.5 shadow-sm"
+                                        onClick={handleDownloadSummaryPDF}
+                                        disabled={isDownloadingPdf}
+                                    >
+                                        {isDownloadingPdf ? (
+                                            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                        ) : (
+                                            <i className="bi bi-file-earmark-pdf-fill"></i>
+                                        )}
+                                        Download (PDF)
+                                    </button>
+                                </div>
+                            )}
+
+                            {summaryError && (
+                                <div className="text-danger small mt-1">
+                                    {summaryError}
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
 
@@ -714,25 +891,35 @@ export default function Dashboard({ user }) {
                     {todos.length === 0 ? (
                         <div className="text-center text-muted py-3 small">No tasks for today. Add one above!</div>
                     ) : (
-                        todos.map((todo) => (
-                            <div key={todo.id} className="todo-item d-flex align-items-center justify-content-between p-2 mb-1 border-bottom border-secondary-subtle">
-                                <div className="d-flex align-items-center gap-3">
-                                    <input
-                                        type="checkbox"
-                                        className="form-check-input todo-checkbox"
-                                        checked={todo.is_completed}
-                                        onChange={() => handleToggleTodo(todo.id)}
-                                        disabled={!isActive}
-                                    />
-                                    <span className={`todo-text ${todo.is_completed ? 'completed' : ''}`}>
-                                        {todo.title}
-                                    </span>
+                        todos.map((todo) => {
+                            const isWorkStarted = Boolean(isActive || startTime || endTime);
+                            return (
+                                <div key={todo.id} className="todo-item d-flex align-items-center justify-content-between p-2 mb-1 border-bottom border-secondary-subtle">
+                                    <div className="d-flex align-items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            className="form-check-input todo-checkbox"
+                                            checked={todo.is_completed}
+                                            onChange={() => handleToggleTodo(todo.id)}
+                                            disabled={!isActive}
+                                            title={!isActive ? "Start your work timer to mark tasks" : (todo.is_completed ? "Click to uncheck (requires 10-word reason)" : "Click to complete task")}
+                                        />
+                                        <span className={`todo-text ${todo.is_completed ? 'completed' : ''}`}>
+                                            {todo.title}
+                                        </span>
+                                    </div>
+                                    <button 
+                                        type="button"
+                                        className={`btn btn-link p-0 ${isWorkStarted ? 'text-muted opacity-50' : 'text-danger'}`} 
+                                        onClick={() => handleDeleteTodo(todo.id)} 
+                                        disabled={isWorkStarted}
+                                        title={isWorkStarted ? "Tasks cannot be deleted after starting work" : "Delete task"}
+                                    >
+                                        <i className={`bi ${isWorkStarted ? 'bi-lock-fill' : 'bi-trash'}`}></i>
+                                    </button>
                                 </div>
-                                <button className="btn btn-link text-danger p-0" onClick={() => handleDeleteTodo(todo.id)} disabled={endTime}>
-                                    <i className="bi bi-trash"></i>
-                                </button>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             </div>
@@ -764,65 +951,523 @@ export default function Dashboard({ user }) {
         </div>
     );
 
+    const formatDuration = (hoursFloat) => {
+        if (!hoursFloat || hoursFloat <= 0) return '0m';
+        const totalMinutes = Math.round(Number(hoursFloat) * 60);
+        const h = Math.floor(totalMinutes / 60);
+        const m = totalMinutes % 60;
+        if (h === 0) return `${m}m`;
+        if (m === 0) return `${h}h`;
+        return `${h}h ${m}m`;
+    };
+
+    // Calculate data points for graph view based on selected range
+    const graphDataList = useMemo(() => {
+        const list = [];
+        const today = new Date();
+        
+        if (graphRange === '7d' || graphRange === '14d') {
+            const numDays = graphRange === '7d' ? 7 : 14;
+            for (let i = numDays - 1; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(today.getDate() - i);
+                const dateStr = d.toLocaleDateString('en-CA');
+                const dataItem = dataMap[dateStr] || {
+                    date: dateStr,
+                    hours: 0.0,
+                    break_hours: 0.0,
+                    break_seconds: 0,
+                    tasks_completed: 0,
+                    total_tasks: 0,
+                };
+                list.push(dataItem);
+            }
+        } else if (graphRange === 'month') {
+            const year = selectedYear || today.getFullYear();
+            const month = today.getMonth();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            for (let day = 1; day <= daysInMonth; day++) {
+                const d = new Date(year, month, day);
+                const dateStr = d.toLocaleDateString('en-CA');
+                const dataItem = dataMap[dateStr] || {
+                    date: dateStr,
+                    hours: 0.0,
+                    break_hours: 0.0,
+                    break_seconds: 0,
+                    tasks_completed: 0,
+                    total_tasks: 0,
+                };
+                list.push(dataItem);
+            }
+        } else if (graphRange === 'custom') {
+            const start = customStartDate ? new Date(customStartDate + 'T00:00:00') : new Date(today.getTime() - 13 * 86400000);
+            const end = customEndDate ? new Date(customEndDate + 'T00:00:00') : today;
+
+            const actualStart = start <= end ? start : end;
+            const actualEnd = start <= end ? end : start;
+
+            let curr = new Date(actualStart);
+            let count = 0;
+            while (curr <= actualEnd && count < 366) {
+                const dateStr = curr.toLocaleDateString('en-CA');
+                const dataItem = dataMap[dateStr] || {
+                    date: dateStr,
+                    hours: 0.0,
+                    break_hours: 0.0,
+                    break_seconds: 0,
+                    tasks_completed: 0,
+                    total_tasks: 0,
+                };
+                list.push(dataItem);
+                curr.setDate(curr.getDate() + 1);
+                count++;
+            }
+        }
+        return list;
+    }, [graphRange, dataMap, selectedYear, customStartDate, customEndDate]);
+
+    const chartData = useMemo(() => {
+        const labels = graphDataList.map((item) => {
+            const d = new Date(item.date + 'T00:00:00');
+            if (graphRange === '7d' || graphRange === '14d') {
+                return d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
+            }
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        });
+
+        const workData = graphDataList.map((item) => Number(item.hours || 0));
+        const breakData = graphDataList.map((item) => Number(item.break_hours || 0));
+
+        // High-contrast, theme-adaptive palette (Heatmap Emerald Green + Luminous Amber Gold)
+        const workColor = isDarkMode ? '#22c55e' : '#16a34a';
+        const workHover = isDarkMode ? '#4ade80' : '#15803d';
+        const breakColor = isDarkMode ? '#fbbf24' : '#d97706';
+        const breakHover = isDarkMode ? '#fde047' : '#b45309';
+
+        const barPct = graphDataList.length <= 7 
+            ? 0.45 
+            : graphDataList.length <= 14 
+                ? 0.6 
+                : graphDataList.length <= 31 
+                    ? 0.72 
+                    : 0.85;
+
+        return {
+            labels,
+            datasets: [
+                {
+                    label: 'Work Time',
+                    data: workData,
+                    backgroundColor: workColor,
+                    hoverBackgroundColor: workHover,
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    stack: 'timeStack',
+                    barPercentage: barPct,
+                },
+                {
+                    label: 'Break Time',
+                    data: breakData,
+                    backgroundColor: breakColor,
+                    hoverBackgroundColor: breakHover,
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    stack: 'timeStack',
+                    barPercentage: barPct,
+                }
+            ]
+        };
+    }, [graphDataList, graphRange, isDarkMode]);
+
+    const chartOptions = useMemo(() => ({
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: {
+            duration: 400,
+            easing: 'easeOutQuart',
+        },
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
+        scales: {
+            x: {
+                stacked: true,
+                grid: {
+                    display: false,
+                },
+                ticks: {
+                    color: isDarkMode ? '#e2e8f0' : '#334155',
+                    font: {
+                        family: "'Inter', sans-serif",
+                        size: 11,
+                        weight: 600,
+                    },
+                    maxRotation: 0,
+                    autoSkip: true,
+                    maxTicksLimit: graphDataList.length <= 7 ? 7 : graphDataList.length <= 14 ? 14 : Math.min(graphDataList.length, 16),
+                    padding: 6,
+                },
+                border: {
+                    color: isDarkMode ? 'rgba(255, 255, 255, 0.28)' : 'rgba(0, 0, 0, 0.2)',
+                    width: 1.5,
+                }
+            },
+            y: {
+                stacked: true,
+                min: 0,
+                max: 24,
+                ticks: {
+                    stepSize: 4,
+                    callback: (val) => `${val}h`,
+                    color: isDarkMode ? '#e2e8f0' : '#334155',
+                    font: {
+                        family: "'Inter', sans-serif",
+                        size: 11,
+                        weight: 600,
+                    },
+                    padding: 8,
+                },
+                grid: {
+                    color: (context) => {
+                        if (context.tick && context.tick.value === 0) {
+                            return isDarkMode ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.25)';
+                        }
+                        if (context.tick && context.tick.value === 24) {
+                            return isDarkMode ? 'rgba(255, 255, 255, 0.32)' : 'rgba(0, 0, 0, 0.2)';
+                        }
+                        return isDarkMode ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.14)';
+                    },
+                    borderDash: [5, 4],
+                    lineWidth: (context) => (context.tick && context.tick.value === 0 ? 1.5 : 1.2),
+                },
+                border: {
+                    dash: [5, 4],
+                    color: isDarkMode ? 'rgba(255, 255, 255, 0.28)' : 'rgba(0, 0, 0, 0.18)',
+                    width: 1.5,
+                },
+                title: {
+                    display: true,
+                    text: 'Hours (24h Max Range)',
+                    color: isDarkMode ? '#e2e8f0' : '#475569',
+                    font: {
+                        family: "'Inter', sans-serif",
+                        size: 11,
+                        weight: 700,
+                    }
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false,
+            },
+            tooltip: {
+                enabled: true,
+                backgroundColor: isDarkMode ? 'rgba(24, 27, 31, 0.95)' : 'rgba(255, 255, 255, 0.98)',
+                titleColor: isDarkMode ? '#ffffff' : '#111827',
+                bodyColor: isDarkMode ? '#e5e7eb' : '#374151',
+                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+                borderWidth: 1,
+                padding: 12,
+                boxPadding: 5,
+                usePointStyle: true,
+                titleFont: {
+                    family: "'Inter', sans-serif",
+                    size: 13,
+                    weight: 'bold',
+                },
+                bodyFont: {
+                    family: "'Inter', sans-serif",
+                    size: 12,
+                },
+                callbacks: {
+                    title: (tooltipItems) => {
+                        if (!tooltipItems.length) return '';
+                        const idx = tooltipItems[0].dataIndex;
+                        const item = graphDataList[idx];
+                        if (!item) return tooltipItems[0].label;
+                        const d = new Date(item.date + 'T00:00:00');
+                        return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+                    },
+                    label: (context) => {
+                        const idx = context.dataIndex;
+                        const item = graphDataList[idx];
+                        if (!item) return '';
+                        const val = Number(context.raw || 0);
+                        if (context.datasetIndex === 0) {
+                            return `  ⏱️ Work Time: ${formatDuration(val)} (${val.toFixed(2)}h)`;
+                        } else if (context.datasetIndex === 1) {
+                            return `  ☕ Break Time: ${formatDuration(val)} (${val.toFixed(2)}h)`;
+                        }
+                        return '';
+                    },
+                    afterBody: (tooltipItems) => {
+                        if (!tooltipItems.length) return [];
+                        const idx = tooltipItems[0].dataIndex;
+                        const item = graphDataList[idx];
+                        if (!item) return [];
+                        const completed = item.tasks_completed || 0;
+                        const total = item.total_tasks || 0;
+                        const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+                        const totalLogged = (Number(item.hours) || 0) + (Number(item.break_hours) || 0);
+                        return [
+                            `  📋 Tasks: ${completed} / ${total} completed (${pct}%)`,
+                            `  ⏳ Total Day: ${formatDuration(totalLogged)} / 24h`
+                        ];
+                    }
+                }
+            }
+        },
+        onClick: (event, elements) => {
+            if (elements && elements.length > 0) {
+                const idx = elements[0].index;
+                const item = graphDataList[idx];
+                if (item) {
+                    setSelectedDateStats({
+                        date: item.date,
+                        hours: item.hours || 0.0,
+                        breakHours: item.break_hours || 0.0,
+                        breakSeconds: item.break_seconds || 0,
+                        completed: item.tasks_completed || 0,
+                        total: item.total_tasks || 0
+                    });
+                }
+            }
+        }
+    }), [graphDataList, isDarkMode, graphRange]);
+
     const renderHeatmapSection = () => (
         <div className="row g-4">
             <div className="col-12">
                 <div className="card border-0 shadow-sm rounded-4">
                     <div className="card-body p-4">
-                        <h5 className="fw-bold mb-4">Performance Heatmap</h5>
-                        <div className="row">
-                            <div className="col-12 col-lg-10">
-                                <div className="d-flex mb-4 pb-2">
-                                    <div className="heatmap-days text-muted small me-2 d-flex flex-column" style={{ marginTop: '0px', gap: '4px', fontSize: '0.75rem' }}>
-                                        <div style={{ height: '14px', lineHeight: '14px' }}>Sun</div>
-                                        <div style={{ height: '14px', lineHeight: '14px' }}>Mon</div>
-                                        <div style={{ height: '14px', lineHeight: '14px' }}>Tue</div>
-                                        <div style={{ height: '14px', lineHeight: '14px' }}>Wed</div>
-                                        <div style={{ height: '14px', lineHeight: '14px' }}>Thu</div>
-                                        <div style={{ height: '14px', lineHeight: '14px' }}>Fri</div>
-                                        <div style={{ height: '14px', lineHeight: '14px' }}>Sat</div>
-                                    </div>
-                                    
-                                    <div className="flex-grow-1 overflow-auto">
-                                        <div className="heatmap-container d-flex align-items-start" style={{ gap: '16px' }}>
-                                            {renderHeatmapGrid()}
+                        {/* Header with Title and Round Switch Button */}
+                        <div className="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
+                            <div>
+                                <h5 className="fw-bold mb-1 d-flex align-items-center gap-2">
+                                    <i className={`bi ${vizMode === 'heatmap' ? 'bi-grid-3x3-gap-fill text-success' : 'bi-bar-chart-fill text-primary'}`}></i>
+                                    {vizMode === 'heatmap' ? 'Performance Heatmap' : 'Timeline Activity Graph'}
+                                </h5>
+                                <p className="text-muted small mb-0">
+                                    {vizMode === 'heatmap' 
+                                        ? 'Yearly consistency grid tracking your daily productive activity' 
+                                        : '24-hour daily timeline comparison of work, breaks, and task completions'}
+                                </p>
+                            </div>
+
+                            {/* Round Switch Toggle Pill */}
+                            <div className="viz-switcher-wrapper">
+                                <button
+                                    type="button"
+                                    className={`btn btn-link p-0 text-decoration-none small fw-semibold d-flex align-items-center gap-1 ${vizMode === 'heatmap' ? 'text-primary' : 'text-muted'}`}
+                                    onClick={() => setVizMode('heatmap')}
+                                    title="View GitHub-style Performance Heatmap"
+                                >
+                                    <i className="bi bi-grid-fill"></i>
+                                    <span>Heatmap</span>
+                                </button>
+
+                                {/* Round Switch Button */}
+                                <button 
+                                    type="button" 
+                                    className={`round-toggle-switch ${vizMode === 'graph' ? 'active' : ''}`}
+                                    onClick={() => setVizMode(vizMode === 'heatmap' ? 'graph' : 'heatmap')}
+                                    role="switch"
+                                    aria-checked={vizMode === 'graph'}
+                                    title={`Switch to ${vizMode === 'heatmap' ? 'Graph view' : 'Heatmap view'}`}
+                                >
+                                    <span className="round-toggle-knob">
+                                        <i className={`bi ${vizMode === 'graph' ? 'bi-bar-chart-fill' : 'bi-grid-fill'}`} style={{ fontSize: '0.62rem' }}></i>
+                                    </span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className={`btn btn-link p-0 text-decoration-none small fw-semibold d-flex align-items-center gap-1 ${vizMode === 'graph' ? 'text-primary' : 'text-muted'}`}
+                                    onClick={() => setVizMode('graph')}
+                                    title="View 24-Hour Timeline Graph"
+                                >
+                                    <i className="bi bi-bar-chart-fill"></i>
+                                    <span>Graph</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Visualization Body */}
+                        {vizMode === 'heatmap' ? (
+                            <div className="row">
+                                <div className="col-12 col-lg-10">
+                                    <div className="d-flex mb-4 pb-2">
+                                        <div className="heatmap-days text-muted small me-2 d-flex flex-column" style={{ marginTop: '0px', gap: '4px', fontSize: '0.75rem' }}>
+                                            <div style={{ height: '14px', lineHeight: '14px' }}>Sun</div>
+                                            <div style={{ height: '14px', lineHeight: '14px' }}>Mon</div>
+                                            <div style={{ height: '14px', lineHeight: '14px' }}>Tue</div>
+                                            <div style={{ height: '14px', lineHeight: '14px' }}>Wed</div>
+                                            <div style={{ height: '14px', lineHeight: '14px' }}>Thu</div>
+                                            <div style={{ height: '14px', lineHeight: '14px' }}>Fri</div>
+                                            <div style={{ height: '14px', lineHeight: '14px' }}>Sat</div>
+                                        </div>
+                                        
+                                        <div className="flex-grow-1 overflow-auto">
+                                            <div className="heatmap-container d-flex align-items-start" style={{ gap: '16px' }}>
+                                                {renderHeatmapGrid()}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div className="col-12 col-lg-2 border-start-lg pt-3 pt-lg-0 mt-3 mt-lg-0">
-                                <div className="d-flex flex-row flex-lg-column gap-2 justify-content-center justify-content-lg-start">
-                                    {availableYears.map((y) => (
-                                        <button
-                                            key={y}
-                                            className={`btn btn-sm py-2 px-3 rounded-pill text-center ${y === selectedYear ? 'btn-primary text-white' : 'btn-outline-secondary'}`}
-                                            onClick={() => fetchHeatmap(y)}
-                                        >
-                                            {y}
-                                        </button>
-                                    ))}
+                                <div className="col-12 col-lg-2 border-start-lg pt-3 pt-lg-0 mt-3 mt-lg-0">
+                                    <div className="d-flex flex-row flex-lg-column gap-2 justify-content-center justify-content-lg-start">
+                                        {availableYears.map((y) => (
+                                            <button
+                                                key={y}
+                                                className={`btn btn-sm py-2 px-3 rounded-pill text-center ${y === selectedYear ? 'btn-primary text-white' : 'btn-outline-secondary'}`}
+                                                onClick={() => fetchHeatmap(y)}
+                                            >
+                                                {y}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        ) : (
+                            /* Graph Visualization */
+                            <div>
+                                {/* Graph Controls: Ranges & Badges */}
+                                <div className="d-flex flex-wrap align-items-center justify-content-between mb-3 pb-2 gap-2 border-bottom">
+                                    {/* Range Filter Buttons */}
+                                    <div className="d-flex align-items-center gap-2 flex-wrap">
+                                        <span className="text-muted small fw-medium me-1">Range:</span>
+                                        <button
+                                            type="button"
+                                            className={`graph-range-pill ${graphRange === '7d' ? 'active' : ''}`}
+                                            onClick={() => setGraphRange('7d')}
+                                        >
+                                            Last 7 Days
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`graph-range-pill ${graphRange === '14d' ? 'active' : ''}`}
+                                            onClick={() => setGraphRange('14d')}
+                                        >
+                                            Last 14 Days
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`graph-range-pill ${graphRange === 'month' ? 'active' : ''}`}
+                                            onClick={() => setGraphRange('month')}
+                                        >
+                                            This Month
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`graph-range-pill d-inline-flex align-items-center gap-1 ${graphRange === 'custom' ? 'active' : ''}`}
+                                            onClick={() => setGraphRange('custom')}
+                                        >
+                                            <i className="bi bi-calendar-range"></i>
+                                            <span>Custom</span>
+                                        </button>
+
+                                        {/* Custom Date Pickers when 'custom' is active */}
+                                        {graphRange === 'custom' && (
+                                            <div className="d-inline-flex align-items-center gap-2 px-3 py-1 bg-body-tertiary rounded-pill border shadow-sm">
+                                                <div className="d-flex align-items-center gap-1">
+                                                    <span className="text-muted small" style={{ fontSize: '0.72rem' }}>From:</span>
+                                                    <input
+                                                        type="date"
+                                                        className="form-control form-control-sm border-0 bg-transparent py-0 px-1 shadow-none fw-medium text-body"
+                                                        style={{ width: '130px', fontSize: '0.78rem' }}
+                                                        value={customStartDate}
+                                                        max={customEndDate || new Date().toLocaleDateString('en-CA')}
+                                                        onChange={(e) => handleCustomDateChange('start', e.target.value)}
+                                                    />
+                                                </div>
+                                                <span className="text-muted small">—</span>
+                                                <div className="d-flex align-items-center gap-1">
+                                                    <span className="text-muted small" style={{ fontSize: '0.72rem' }}>To:</span>
+                                                    <input
+                                                        type="date"
+                                                        className="form-control form-control-sm border-0 bg-transparent py-0 px-1 shadow-none fw-medium text-body"
+                                                        style={{ width: '130px', fontSize: '0.78rem' }}
+                                                        value={customEndDate}
+                                                        min={customStartDate}
+                                                        max={new Date().toLocaleDateString('en-CA')}
+                                                        onChange={(e) => handleCustomDateChange('end', e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Legend Indicators */}
+                                    <div className="d-flex align-items-center gap-2">
+                                        <div className="chart-legend-badge">
+                                            <span className="chart-legend-dot" style={{ backgroundColor: isDarkMode ? '#22c55e' : '#16a34a' }}></span>
+                                            <span>Work Time</span>
+                                        </div>
+                                        <div className="chart-legend-badge">
+                                            <span className="chart-legend-dot" style={{ backgroundColor: isDarkMode ? '#fbbf24' : '#d97706' }}></span>
+                                            <span>Break Time</span>
+                                        </div>
+                                        <div className="chart-legend-badge text-muted" title="Y-axis maximum is 24 hours per day">
+                                            <i className="bi bi-clock-history"></i>
+                                            <span>Max 24h</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Chart Canvas */}
+                                <div className="analytics-chart-wrapper">
+                                    <Bar data={chartData} options={chartOptions} />
+                                </div>
+                            </div>
+                        )}
                         
                         {/* Selected Date Stats */}
-                        <div className="d-flex align-items-center mt-4 mb-2">
-                            <h6 className="fw-bold mb-0 text-muted">Stats for {selectedDateStats.date}</h6>
+                        <div className="d-flex align-items-center justify-content-between mt-4 mb-2">
+                            <h6 className="fw-bold mb-0 text-muted d-flex align-items-center gap-2">
+                                <i className="bi bi-calendar-event"></i>
+                                Stats for {selectedDateStats.date}
+                            </h6>
+                            <span className="text-muted small">
+                                {vizMode === 'heatmap' ? 'Click on any cell to view day details' : 'Click or hover on any bar to inspect date'}
+                            </span>
                         </div>
                         <div className="row text-center g-3 justify-content-center">
-                            <div className="col-6 col-md-4">
-                                <div className="p-3 bg-light rounded-4 h-100 d-flex flex-column justify-content-center">
-                                    <div className="text-muted small fw-medium text-uppercase">Tasks Done</div>
+                            <div className="col-12 col-md-4">
+                                <div className="p-3 bg-light rounded-4 h-100 d-flex flex-column justify-content-center border">
+                                    <div className="text-muted small fw-medium text-uppercase mb-1">Tasks Done</div>
                                     <div className="fs-4 fw-bold text-info">
                                         {selectedDateStats.completed} / {selectedDateStats.total}
+                                    </div>
+                                    <div className="text-muted small" style={{ fontSize: '0.72rem' }}>
+                                        {selectedDateStats.total > 0 
+                                            ? `${Math.round((selectedDateStats.completed / selectedDateStats.total) * 100)}% completed` 
+                                            : 'No tasks scheduled'}
                                     </div>
                                 </div>
                             </div>
                             <div className="col-6 col-md-4">
-                                <div className="p-3 bg-light rounded-4 h-100 d-flex flex-column justify-content-center">
-                                    <div className="text-muted small fw-medium text-uppercase">Hours Worked</div>
+                                <div className="p-3 bg-light rounded-4 h-100 d-flex flex-column justify-content-center border">
+                                    <div className="text-muted small fw-medium text-uppercase mb-1">Hours Worked</div>
                                     <div className="fs-4 fw-bold text-success">
-                                        {parseFloat(selectedDateStats.hours).toFixed(1)}
+                                        {parseFloat(selectedDateStats.hours || 0).toFixed(1)}h
+                                    </div>
+                                    <div className="text-muted small" style={{ fontSize: '0.72rem' }}>
+                                        {formatDuration(selectedDateStats.hours || 0)} focus time
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="col-6 col-md-4">
+                                <div className="p-3 bg-light rounded-4 h-100 d-flex flex-column justify-content-center border">
+                                    <div className="text-muted small fw-medium text-uppercase mb-1">Break Time</div>
+                                    <div className="fs-4 fw-bold text-warning">
+                                        {formatDuration(selectedDateStats.breakHours || 0)}
+                                    </div>
+                                    <div className="text-muted small" style={{ fontSize: '0.72rem' }}>
+                                        {selectedDateStats.breakHours > 0 
+                                            ? `${parseFloat(selectedDateStats.breakHours).toFixed(1)}h pause recorded` 
+                                            : 'No break taken'}
                                     </div>
                                 </div>
                             </div>
@@ -963,18 +1608,34 @@ export default function Dashboard({ user }) {
                     <div className="modal-dialog modal-dialog-centered">
                         <div className="modal-content border-0 shadow">
                             <div className="modal-header border-0 pb-0">
-                                <h1 className="modal-title fs-5 fw-bold">Reason Required</h1>
+                                <h1 className="modal-title fs-5 fw-bold">
+                                    {reasonType === 'late' 
+                                        ? 'Late Arrival Reason Required' 
+                                        : (reasonType === 'early' 
+                                            ? 'Early Departure Reason Required' 
+                                            : 'Session Conclusion Reason')}
+                                </h1>
                                 <button type="button" className="btn-close" onClick={() => setShowReasonModal(false)}></button>
                             </div>
                             <div className="modal-body text-start">
                                 {reasonError && <div className="alert alert-danger bg-danger bg-opacity-10 text-danger border-0 small py-2 text-center mb-3">{reasonError}</div>}
                                 <p className="text-muted small mb-2">
-                                    Please provide a reason. Minimum 15 words required.
+                                    {reasonType === 'late'
+                                        ? 'You are starting after your scheduled start time. Please provide an explanation (min 15 words).'
+                                        : (reasonType === 'early'
+                                            ? 'You are ending work before completing your daily target. Please provide a reason (min 15 words).'
+                                            : 'Please provide a reason or summary note for ending this work session (min 15 words).')}
                                 </p>
                                 <textarea
                                     className="form-control bg-body-tertiary border-0"
                                     rows="4"
-                                    placeholder="Type your reason here..."
+                                    placeholder={
+                                        reasonType === 'late' 
+                                            ? 'Explain why you started work late today...' 
+                                            : (reasonType === 'early' 
+                                                ? 'Explain why you are ending your shift early today...' 
+                                                : 'Explain your reason for ending work session today...')
+                                    }
                                     value={reasonText}
                                     onChange={(e) => setReasonText(e.target.value)}
                                 ></textarea>
@@ -990,13 +1651,114 @@ export default function Dashboard({ user }) {
                                     onClick={reasonType === 'late' ? handleStartWorkWithReason : handleEndWorkWithReason}
                                     disabled={countWords(reasonText) < 15}
                                 >
-                                    Submit & Continue
+                                    {reasonType === 'late' ? 'Submit & Start Work' : 'Submit & End Work'}
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
+            {/* Uncheck Task Reason Modal */}
+            {showUncheckModal && (
+                <div className="modal-backdrop fade show" style={{ zIndex: 1060 }}></div>
+            )}
+            {showUncheckModal && (
+                <div className="modal fade show d-block" style={{ zIndex: 1070 }} tabIndex="-1" role="dialog" aria-modal="true">
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                            <div className="modal-header border-0 pb-0 pt-4 px-4">
+                                <div className="d-flex align-items-center gap-2">
+                                    <div className="bg-warning bg-opacity-10 text-warning p-2 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '38px', height: '38px' }}>
+                                        <i className="bi bi-arrow-counterclockwise fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <h5 className="modal-title fw-bold mb-0">Uncheck Task</h5>
+                                        <p className="text-muted small mb-0">Explain why this completed task is being reopened</p>
+                                    </div>
+                                </div>
+                                <button 
+                                    type="button" 
+                                    className="btn-close" 
+                                    onClick={() => {
+                                        setShowUncheckModal(false);
+                                        setUncheckTodoTarget(null);
+                                    }}
+                                ></button>
+                            </div>
+                            <div className="modal-body px-4 py-3 text-start">
+                                {uncheckError && (
+                                    <div className="alert alert-danger bg-danger bg-opacity-10 text-danger border-0 small py-2 text-center mb-3">
+                                        {uncheckError}
+                                    </div>
+                                )}
+
+                                <div className="p-3 bg-body-tertiary rounded-3 mb-3 border">
+                                    <div className="text-muted small fw-medium mb-1 text-uppercase" style={{ fontSize: '0.7rem' }}>Task to Reopen</div>
+                                    <div className="fw-semibold text-truncate">{uncheckTodoTarget?.title}</div>
+                                </div>
+
+                                <label className="form-label small fw-semibold text-muted mb-1">
+                                    Reason for Unchecking <span className="text-danger">*</span> (Minimum 10 words)
+                                </label>
+                                <textarea
+                                    className="form-control bg-body-tertiary border"
+                                    rows="4"
+                                    placeholder="Write at least 10 words explaining why this completed task needs to be unchecked or reworked..."
+                                    value={uncheckReason}
+                                    onChange={(e) => {
+                                        setUncheckReason(e.target.value);
+                                        if (uncheckError && countWords(e.target.value) >= 10) {
+                                            setUncheckError('');
+                                        }
+                                    }}
+                                    autoFocus
+                                ></textarea>
+
+                                <div className="d-flex justify-content-between align-items-center mt-2">
+                                    <span className="small text-muted" style={{ fontSize: '0.75rem' }}>
+                                        {countWords(uncheckReason) < 10 
+                                            ? `${10 - countWords(uncheckReason)} more word${10 - countWords(uncheckReason) === 1 ? '' : 's'} required`
+                                            : '✓ Requirement met'}
+                                    </span>
+                                    <span className={`small fw-bold ${countWords(uncheckReason) >= 10 ? 'text-success' : 'text-muted'}`}>
+                                        {countWords(uncheckReason)} / 10 words
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="modal-footer border-0 px-4 pb-4 pt-1">
+                                <button 
+                                    type="button" 
+                                    className="btn btn-light rounded-pill px-4 fw-medium" 
+                                    onClick={() => {
+                                        setShowUncheckModal(false);
+                                        setUncheckTodoTarget(null);
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-warning text-dark rounded-pill px-4 fw-semibold shadow-sm"
+                                    onClick={handleConfirmUncheck}
+                                    disabled={countWords(uncheckReason) < 10}
+                                >
+                                    <i className="bi bi-check2-circle me-1"></i>
+                                    Confirm & Uncheck
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Work Summary Detailed Modal */}
+            <WorkSummaryModal
+                isOpen={showSummaryModal}
+                onClose={() => setShowSummaryModal(false)}
+                summaryData={summaryData}
+                onDownloadPdf={handleDownloadSummaryPDF}
+                isDownloadingPdf={isDownloadingPdf}
+            />
         </div>
     );
 }

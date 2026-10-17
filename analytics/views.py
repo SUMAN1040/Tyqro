@@ -29,9 +29,23 @@ def analytics_data(request):
     else:
         target_year = current_year
 
-    start_date = datetime.date(target_year, 1, 1)
-    end_date = datetime.date(target_year, 12, 31)
+    start_date_param = request.GET.get('start_date')
+    end_date_param = request.GET.get('end_date')
+
+    if start_date_param and end_date_param:
+        try:
+            start_date = datetime.date.fromisoformat(start_date_param)
+            end_date = datetime.date.fromisoformat(end_date_param)
+            target_year = end_date.year
+        except ValueError:
+            start_date = datetime.date(target_year, 1, 1)
+            end_date = datetime.date(target_year, 12, 31)
+    else:
+        start_date = datetime.date(target_year, 1, 1)
+        end_date = datetime.date(target_year, 12, 31)
+
     performances = DailyPerformance.objects.filter(user=request.user, date__range=(start_date, end_date))
+    attendances = Attendance.objects.filter(user=request.user, date__range=(start_date, end_date))
     todos = Todo.objects.filter(user=request.user, date__range=(start_date, end_date)) \
         .values('date') \
         .annotate(
@@ -46,16 +60,43 @@ def analytics_data(request):
         data_map[date_str] = {
             'date': date_str,
             'hours': float(perf.hours_worked),
+            'break_hours': 0.0,
+            'break_seconds': 0,
             'tasks_completed': 0,
             'total_tasks': 0
         }
         
+    for att in attendances:
+        date_str = att.date.isoformat()
+        if date_str not in data_map:
+            data_map[date_str] = {
+                'date': date_str,
+                'hours': 0.0,
+                'break_hours': 0.0,
+                'break_seconds': 0,
+                'tasks_completed': 0,
+                'total_tasks': 0
+            }
+        
+        break_sec = att.total_break_duration.total_seconds() if att.total_break_duration else 0
+        if att.is_active and att.current_break_start:
+            break_sec += (now - att.current_break_start).total_seconds()
+        
+        data_map[date_str]['break_seconds'] = int(max(0, break_sec))
+        data_map[date_str]['break_hours'] = round(max(0, break_sec) / 3600.0, 2)
+        
+        if att.duration and att.duration.total_seconds() > 0:
+            att_hours = round(att.duration.total_seconds() / 3600.0, 2)
+            data_map[date_str]['hours'] = max(data_map[date_str]['hours'], att_hours)
+
     for item in todos:
         date_str = item['date'].isoformat()
         if date_str not in data_map:
             data_map[date_str] = {
                 'date': date_str,
                 'hours': 0.0,
+                'break_hours': 0.0,
+                'break_seconds': 0,
                 'tasks_completed': 0,
                 'total_tasks': 0
             }
@@ -69,9 +110,10 @@ def analytics_data(request):
         today_att = Attendance.objects.filter(user=request.user, date=today).first()
         if today_att:
             live_hours = 0.0
+            active_break = (now - today_att.current_break_start).total_seconds() if (today_att.is_active and today_att.current_break_start) else 0
+            accum_break = (today_att.total_break_duration.total_seconds() if today_att.total_break_duration else 0) + active_break
+
             if today_att.is_active and today_att.start_time:
-                active_break = (now - today_att.current_break_start).total_seconds() if today_att.current_break_start else 0
-                accum_break = today_att.total_break_duration.total_seconds() + active_break
                 elapsed = max(0, (now - today_att.start_time).total_seconds())
                 net_seconds = max(0, elapsed - accum_break)
                 live_hours = round(net_seconds / 3600.0, 2)
@@ -82,11 +124,15 @@ def analytics_data(request):
                 data_map[today_str] = {
                     'date': today_str,
                     'hours': live_hours,
+                    'break_hours': round(accum_break / 3600.0, 2),
+                    'break_seconds': int(accum_break),
                     'tasks_completed': 0,
                     'total_tasks': 0
                 }
             else:
                 data_map[today_str]['hours'] = max(data_map[today_str]['hours'], live_hours)
+                data_map[today_str]['break_hours'] = round(accum_break / 3600.0, 2)
+                data_map[today_str]['break_seconds'] = int(accum_break)
 
-    data = list(data_map.values())
+    data = sorted(list(data_map.values()), key=lambda x: x['date'])
     return Response({'status': 'success', 'data': data, 'years': available_years, 'selected_year': target_year})
