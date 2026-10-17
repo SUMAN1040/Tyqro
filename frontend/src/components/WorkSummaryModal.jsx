@@ -314,9 +314,17 @@ const WorkSummaryModal = ({ isOpen, onClose, summaryData, onDownloadPdf, isDownl
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    <span className={`badge rounded-pill flex-shrink-0 px-2.5 py-1.5 ${task.is_completed ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-warning-subtle text-warning border border-warning-subtle'}`}>
-                                                        {task.is_completed ? 'Completed' : 'Pending'}
-                                                    </span>
+                                                    <div className="d-flex align-items-center gap-2 flex-shrink-0">
+                                                        {task.duration_formatted && task.duration_formatted !== '-' && (
+                                                            <span className="badge bg-secondary-subtle text-body font-monospace rounded-pill px-2.5 py-1" style={{ fontSize: '0.72rem' }}>
+                                                                <i className="bi bi-stopwatch text-primary me-1"></i>
+                                                                {task.duration_formatted}
+                                                            </span>
+                                                        )}
+                                                        <span className={`badge rounded-pill flex-shrink-0 px-2.5 py-1.5 ${task.is_completed ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-warning-subtle text-warning border border-warning-subtle'}`}>
+                                                            {task.is_completed ? 'Completed' : 'Pending'}
+                                                        </span>
+                                                    </div>
                                                 </div>
 
                                                 {/* Reopen note */}

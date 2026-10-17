@@ -61,9 +61,66 @@ def toggle_todo(request, todo_id):
             todo.uncheck_reason = reason
             todo.is_completed = False
         else:
+            # Completing task: automatically pause/commit any active task timer
+            if todo.timer_started_at:
+                todo.pause_timer(commit=False)
             todo.is_completed = True
         todo.save()
-        return Response({'status': 'success', 'is_completed': todo.is_completed, 'uncheck_reason': todo.uncheck_reason})
+        serializer = TodoSerializer(todo)
+        return Response({
+            'status': 'success',
+            'is_completed': todo.is_completed,
+            'uncheck_reason': todo.uncheck_reason,
+            'todo': serializer.data
+        })
+    except Todo.DoesNotExist:
+        return Response({'error': 'Todo not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def start_task_timer(request, todo_id):
+    attendance = Attendance.objects.filter(user=request.user, is_active=True).first()
+    if not attendance:
+        return Response({'error': 'Please start your work session before starting a task timer.'}, status=status.HTTP_400_BAD_REQUEST)
+    if attendance.current_break_start:
+        return Response({'error': 'Cannot start a task timer while on break.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        todo = Todo.objects.get(id=todo_id, user=request.user)
+        if todo.is_completed:
+            return Response({'error': 'Cannot start a timer for an already completed task.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Single active task rule: Pause any other running task timers for this user
+        other_running_todos = Todo.objects.filter(user=request.user, timer_started_at__isnull=False).exclude(id=todo.id)
+        for t in other_running_todos:
+            t.pause_timer(commit=True)
+
+        if not todo.timer_started_at:
+            todo.timer_started_at = timezone.now()
+            todo.save(update_fields=['timer_started_at'])
+
+        todos = Todo.objects.filter(user=request.user, date=todo.date).order_by('created_at')
+        return Response({
+            'status': 'success',
+            'todo': TodoSerializer(todo).data,
+            'todos': TodoSerializer(todos, many=True).data
+        })
+    except Todo.DoesNotExist:
+        return Response({'error': 'Todo not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def pause_task_timer(request, todo_id):
+    try:
+        todo = Todo.objects.get(id=todo_id, user=request.user)
+        todo.pause_timer(commit=True)
+
+        todos = Todo.objects.filter(user=request.user, date=todo.date).order_by('created_at')
+        return Response({
+            'status': 'success',
+            'todo': TodoSerializer(todo).data,
+            'todos': TodoSerializer(todos, many=True).data
+        })
     except Todo.DoesNotExist:
         return Response({'error': 'Todo not found.'}, status=status.HTTP_404_NOT_FOUND)
 

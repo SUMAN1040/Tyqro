@@ -13,6 +13,20 @@ export const formatClockTime = (isoString) => {
     }
 };
 
+export const sanitizePdfText = (raw, maxLength = 0) => {
+    if (!raw || typeof raw !== 'string') return '';
+    // Strip HTML tags
+    let cleaned = raw.replace(/<[^>]*>?/gm, ' ');
+    // Strip non-ASCII/emojis that cause corrupt glyphs in WinAnsi/Helvetica
+    cleaned = cleaned.replace(/[^\x20-\x7E\xA0-\xFF]/g, ' ');
+    // Collapse multiline & extra whitespace into single spaces
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    if (maxLength > 0 && cleaned.length > maxLength) {
+        cleaned = cleaned.slice(0, maxLength).trim() + '...';
+    }
+    return cleaned;
+};
+
 const getBase64Logo = () => {
     return new Promise((resolve) => {
         try {
@@ -401,10 +415,16 @@ export const generateWorkSummaryPDF = async (data) => {
             doc.setDrawColor(...alertBorder);
             doc.setLineWidth(0.4);
 
-            const cleanReason = (endReasonText || '').replace(/[\r\n\t]+/g, ' ').trim();
+            const cleanReason = sanitizePdfText(endReasonText, 320);
             const quoteContent = `"${cleanReason}"`;
             const splitContent = doc.splitTextToSize(quoteContent, contentWidth - 14);
-            const boxH = Math.max(12, 7 + splitContent.length * 4.2 + 2);
+            const boxH = Math.max(12, 7 + splitContent.length * 3.8 + 2);
+
+            // If box exceeds available height on page 1, break to next page
+            if (currentY + boxH > pageHeight - 25) {
+                doc.addPage();
+                currentY = 20;
+            }
 
             doc.roundedRect(margin, currentY, contentWidth, boxH, 1.5, 1.5, 'FD');
 
@@ -420,9 +440,9 @@ export const generateWorkSummaryPDF = async (data) => {
 
             // Reason Text
             doc.setFont('helvetica', 'italic');
-            doc.setFontSize(7.5);
+            doc.setFontSize(7.2);
             doc.setTextColor(30, 41, 59);
-            doc.text(splitContent, margin + 5, currentY + 9.5);
+            doc.text(splitContent, margin + 5, currentY + 9.2);
 
             currentY += boxH + 4;
         }
@@ -432,10 +452,15 @@ export const generateWorkSummaryPDF = async (data) => {
             doc.setDrawColor(245, 158, 11); // Amber-500
             doc.setLineWidth(0.4);
 
-            const cleanLate = (lateReasonText || '').replace(/[\r\n\t]+/g, ' ').trim();
+            const cleanLate = sanitizePdfText(lateReasonText, 320);
             const quoteLate = `"${cleanLate}"`;
             const splitLate = doc.splitTextToSize(quoteLate, contentWidth - 14);
-            const boxH = Math.max(12, 7 + splitLate.length * 4.2 + 2);
+            const boxH = Math.max(12, 7 + splitLate.length * 3.8 + 2);
+
+            if (currentY + boxH > pageHeight - 25) {
+                doc.addPage();
+                currentY = 20;
+            }
 
             doc.roundedRect(margin, currentY, contentWidth, boxH, 1.5, 1.5, 'FD');
 
@@ -449,15 +474,21 @@ export const generateWorkSummaryPDF = async (data) => {
             doc.text('LATE ARRIVAL REASON', margin + 5, currentY + 5);
 
             doc.setFont('helvetica', 'italic');
-            doc.setFontSize(7.5);
+            doc.setFontSize(7.2);
             doc.setTextColor(30, 41, 59);
-            doc.text(splitLate, margin + 5, currentY + 9.5);
+            doc.text(splitLate, margin + 5, currentY + 9.2);
 
             currentY += boxH + 4;
         }
     }
 
     // --- 6. Task List Table (Sanitized and Bounded) ---
+    // If not enough vertical space remains on Page 1 (less than 45mm before footer), start table on page 2
+    if (currentY > pageHeight - 45) {
+        doc.addPage();
+        currentY = 20;
+    }
+
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(15, 23, 42);
@@ -466,28 +497,31 @@ export const generateWorkSummaryPDF = async (data) => {
 
     const taskRows = (data.tasks?.list || []).map((t, index) => {
         const statusText = t.is_completed ? 'COMPLETED' : 'PENDING';
+        const durationText = (t.duration_formatted && t.duration_formatted !== '-') ? t.duration_formatted : '-';
         let note = '-';
         if (t.uncheck_reason) {
-            // Clean up multiline or messy pasted text
-            const cleanReason = t.uncheck_reason.replace(/[\r\n]+/g, ' ').trim();
-            note = `Reopened: "${cleanReason}"`;
+            const cleanReason = sanitizePdfText(t.uncheck_reason, 140);
+            note = cleanReason ? `Reopened: "${cleanReason}"` : '-';
         }
         return [
             (index + 1).toString(),
-            t.title || 'Untitled task',
+            sanitizePdfText(t.title || 'Untitled task', 55),
+            durationText,
             statusText,
             note,
         ];
     });
 
     if (taskRows.length === 0) {
-        taskRows.push(['-', 'No tasks logged for this shift', '-', '-']);
+        taskRows.push(['-', 'No tasks logged for this shift', '-', '-', '-']);
     }
 
     autoTable(doc, {
         startY: currentY,
-        margin: { left: margin, right: margin },
-        head: [['#', 'Task Description', 'Status', 'Notes & Reopen Explanations']],
+        margin: { top: 20, bottom: 20, left: margin, right: margin },
+        pageBreak: 'auto',
+        rowPageBreak: 'avoid',
+        head: [['#', 'Task Description', 'Time Spent', 'Status', 'Notes & Reopen Explanations']],
         body: taskRows,
         theme: 'striped',
         headStyles: {
@@ -495,29 +529,30 @@ export const generateWorkSummaryPDF = async (data) => {
             textColor: [255, 255, 255],
             fontStyle: 'bold',
             fontSize: 7.5,
-            cellPadding: 2.5,
+            cellPadding: 2.2,
         },
         bodyStyles: {
-            fontSize: 7.2,
-            cellPadding: 2.5,
+            fontSize: 7.0,
+            cellPadding: 2.2,
             textColor: [30, 41, 59],
             overflow: 'linebreak',
         },
         columnStyles: {
-            0: { cellWidth: 10, halign: 'center' },
-            1: { cellWidth: 62 },
-            2: { cellWidth: 26, halign: 'center', fontStyle: 'bold' },
-            3: { cellWidth: 84 },
+            0: { cellWidth: 8, halign: 'center' },
+            1: { cellWidth: 58 },
+            2: { cellWidth: 24, halign: 'center', fontStyle: 'bold' },
+            3: { cellWidth: 24, halign: 'center', fontStyle: 'bold' },
+            4: { cellWidth: 68 },
         },
         didParseCell: (hookData) => {
-            if (hookData.section === 'body' && hookData.column.index === 2) {
+            if (hookData.section === 'body' && hookData.column.index === 3) {
                 if (hookData.cell.raw === 'COMPLETED') {
                     hookData.cell.styles.textColor = [22, 163, 74]; // Green
                 } else if (hookData.cell.raw === 'PENDING') {
                     hookData.cell.styles.textColor = [217, 119, 6]; // Amber
                 }
             }
-            if (hookData.section === 'body' && hookData.column.index === 3 && typeof hookData.cell.raw === 'string' && hookData.cell.raw.startsWith('Reopened:')) {
+            if (hookData.section === 'body' && hookData.column.index === 4 && typeof hookData.cell.raw === 'string' && hookData.cell.raw.startsWith('Reopened:')) {
                 hookData.cell.styles.textColor = [194, 65, 12]; // Orange-700
                 hookData.cell.styles.fontStyle = 'italic';
             }
@@ -526,13 +561,13 @@ export const generateWorkSummaryPDF = async (data) => {
 
     // --- 7. Reopened Tasks Attention Callout (if any) ---
     const reopenedList = data.tasks?.reopened_list || [];
-    let finalY = doc.lastAutoTable.finalY + 5;
+    let finalY = doc.lastAutoTable.finalY + 4;
 
     if (reopenedList.length > 0) {
-        const calloutH = Math.min(22, 6 + reopenedList.length * 4.5);
+        const calloutH = Math.min(22, 6 + Math.min(reopenedList.length, 3) * 4.2);
         if (finalY + calloutH > pageHeight - 20) {
             doc.addPage();
-            finalY = 46;
+            finalY = 20;
         }
 
         doc.setFillColor(254, 242, 242); // Red-50
@@ -550,10 +585,10 @@ export const generateWorkSummaryPDF = async (data) => {
         doc.setFontSize(6.8);
         doc.setTextColor(127, 29, 29);
         reopenedList.slice(0, 3).forEach((item, rIdx) => {
-            const cleanReason = (item.reason || '').replace(/[\r\n]+/g, ' ').trim();
-            const preview = `• "${item.title}": ${cleanReason}`;
+            const cleanReason = sanitizePdfText(item.reason, 110);
+            const preview = `• "${sanitizePdfText(item.title, 35)}": ${cleanReason}`;
             const clipped = doc.splitTextToSize(preview, contentWidth - 8)[0];
-            doc.text(clipped, margin + 4, finalY + 9.5 + rIdx * 4);
+            doc.text(clipped, margin + 4, finalY + 9.2 + rIdx * 4);
         });
 
         finalY += calloutH + 4;
@@ -562,9 +597,9 @@ export const generateWorkSummaryPDF = async (data) => {
     // --- 8. Cryptographic Verification & Copyright Audit Panel ---
     let authY = finalY;
     const authCardH = 21;
-    if (authY + authCardH > pageHeight - 16) {
+    if (authY + authCardH > pageHeight - 18) {
         doc.addPage();
-        authY = 46;
+        authY = 20;
     }
 
     doc.setFillColor(248, 250, 252); // Slate-50
@@ -612,6 +647,25 @@ export const generateWorkSummaryPDF = async (data) => {
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
+
+        // If page 2+, draw a sleek mini header banner!
+        if (i > 1) {
+            doc.setFillColor(15, 23, 42); // Deep Slate-900
+            doc.rect(0, 0, pageWidth, 12, 'F');
+            doc.setFillColor(37, 99, 235); // Blue-600
+            doc.rect(0, 12, pageWidth, 0.8, 'F');
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8);
+            doc.setTextColor(255, 255, 255);
+            doc.text('TYQRO • DAILY WORK ATTENDANCE & PERFORMANCE SUMMARY (CONTINUED)', margin, 8);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7);
+            doc.setTextColor(148, 163, 184);
+            const reportIdStr = data.report_id ? `Report ID: ${data.report_id}` : '';
+            doc.text(reportIdStr, pageWidth - margin, 8, { align: 'right' });
+        }
 
         // Apply platform security watermark across background (confined to white area)
         renderSecurityWatermark(doc, pageWidth, pageHeight, i);

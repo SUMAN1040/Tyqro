@@ -30,6 +30,10 @@ def auto_close_previous_sessions(user):
         session.duration = net_duration
         session.is_active = False
         session.save()
+
+        from todos.models import Todo
+        for active_task in Todo.objects.filter(user=user, date=session.date, timer_started_at__isnull=False):
+            active_task.pause_timer(commit=True)
         
         from analytics.models import DailyPerformance
         perf, _ = DailyPerformance.objects.select_for_update().get_or_create(user=user, date=session.date)
@@ -105,9 +109,13 @@ def end_work(request):
         if end_reason_val:
             attendance.early_leave_reason = end_reason_val
         attendance.save()
+
+        # Pause and commit any running task timers upon session conclusion
+        from todos.models import Todo
+        for active_task in Todo.objects.filter(user=request.user, timer_started_at__isnull=False):
+            active_task.pause_timer(commit=True)
         
         from analytics.models import DailyPerformance
-        from todos.models import Todo
         perf, _ = DailyPerformance.objects.select_for_update().get_or_create(user=request.user, date=attendance.date)
         perf.hours_worked = round(attendance.duration.total_seconds() / 3600.0, 2)
         perf.attendance_points = 100
@@ -137,6 +145,12 @@ def start_break(request):
             return Response({'status': 'error', 'message': 'Already on break'}, status=status.HTTP_400_BAD_REQUEST)
         attendance.current_break_start = timezone.now()
         attendance.save()
+
+        # Automatically pause running task timers when employee goes on break
+        from todos.models import Todo
+        for active_task in Todo.objects.filter(user=request.user, timer_started_at__isnull=False):
+            active_task.pause_timer(commit=True)
+
         return Response({
             'status': 'success',
             **serialize_attendance_status(attendance)
@@ -257,11 +271,29 @@ def daily_work_summary(request):
     task_list = []
     reopened_tasks = []
     for t in todos_qs:
+        task_sec = t.total_seconds
+        if t.timer_started_at:
+            task_sec += max(0, int((timezone.now() - t.timer_started_at).total_seconds()))
+
+        hrs = task_sec // 3600
+        mins = (task_sec % 3600) // 60
+        secs = task_sec % 60
+        if hrs > 0:
+            duration_formatted = f"{hrs:02d}h {mins:02d}m {secs:02d}s"
+        elif mins > 0:
+            duration_formatted = f"{mins:02d}m {secs:02d}s"
+        elif secs > 0:
+            duration_formatted = f"{secs}s"
+        else:
+            duration_formatted = "-"
+
         item = {
             'id': t.id,
             'title': t.title,
             'is_completed': t.is_completed,
             'uncheck_reason': t.uncheck_reason,
+            'total_seconds': task_sec,
+            'duration_formatted': duration_formatted,
             'created_at': t.created_at.isoformat() if t.created_at else None,
         }
         task_list.append(item)

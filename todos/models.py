@@ -8,7 +8,23 @@ class Todo(models.Model):
     date = models.DateField(default=timezone.now, db_index=True)
     is_completed = models.BooleanField(default=False)
     uncheck_reason = models.TextField(null=True, blank=True)
+    total_seconds = models.PositiveIntegerField(default=0)
+    timer_started_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def pause_timer(self, commit=True):
+        """If timer is running, accumulate elapsed seconds and stop the timer."""
+        if self.timer_started_at:
+            now = timezone.now()
+            elapsed = (now - self.timer_started_at).total_seconds()
+            self.total_seconds += max(0, int(elapsed))
+            self.timer_started_at = None
+            if commit:
+                self.save(update_fields=['total_seconds', 'timer_started_at'])
+
+    @property
+    def is_timer_running(self):
+        return self.timer_started_at is not None
 
     def __str__(self):
         return self.title

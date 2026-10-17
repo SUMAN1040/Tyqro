@@ -488,6 +488,21 @@ export default function Dashboard({ user }) {
         if (enteringBreak) {
             setIsBreak(true);
             setCurrentBreakStart(now);
+            // Optimistically pause any active task timer
+            setTodos((prev) =>
+                prev.map((t) => {
+                    if (t.timer_started_at) {
+                        const elapsed = Math.max(0, Math.floor((now.getTime() - new Date(t.timer_started_at).getTime()) / 1000));
+                        return {
+                            ...t,
+                            total_seconds: (t.total_seconds || 0) + elapsed,
+                            timer_started_at: null,
+                            is_timer_running: false,
+                        };
+                    }
+                    return t;
+                })
+            );
         } else {
             setIsBreak(false);
             if (currentBreakStart) {
@@ -577,10 +592,112 @@ export default function Dashboard({ user }) {
         proceedToggleTodo(id, true);
     };
 
+    const formatTaskDuration = (totalSecs) => {
+        if (!totalSecs || totalSecs <= 0) return '00:00';
+        const hrs = Math.floor(totalSecs / 3600);
+        const mins = Math.floor((totalSecs % 3600) / 60);
+        const secs = totalSecs % 60;
+        if (hrs > 0) {
+            return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+        return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    };
+
+    const handleToggleTaskTimer = async (todoId, isCurrentlyRunning) => {
+        if (!isActive) {
+            alert('Please start your work session before timing tasks.');
+            return;
+        }
+        if (isBreak) {
+            alert('Cannot run task timer while on break.');
+            return;
+        }
+
+        const now = new Date();
+        if (isCurrentlyRunning) {
+            // Optimistically pause this task
+            setTodos((prev) =>
+                prev.map((t) => {
+                    if (t.id === todoId) {
+                        const elapsed = t.timer_started_at
+                            ? Math.max(0, Math.floor((now.getTime() - new Date(t.timer_started_at).getTime()) / 1000))
+                            : 0;
+                        return {
+                            ...t,
+                            total_seconds: (t.total_seconds || 0) + elapsed,
+                            timer_started_at: null,
+                            is_timer_running: false,
+                        };
+                    }
+                    return t;
+                })
+            );
+
+            try {
+                const res = await API.post(`/api/todos/pause-timer/${todoId}/`);
+                if (res.data?.todos) {
+                    setTodos(res.data.todos);
+                }
+            } catch (err) {
+                console.error('Failed to pause task timer', err);
+                fetchStatusAndTodos();
+            }
+        } else {
+            // Optimistically start this task timer and pause all other active task timers
+            setTodos((prev) =>
+                prev.map((t) => {
+                    if (t.id === todoId) {
+                        return {
+                            ...t,
+                            timer_started_at: now.toISOString(),
+                            is_timer_running: true,
+                        };
+                    } else if (t.timer_started_at) {
+                        const elapsed = Math.max(0, Math.floor((now.getTime() - new Date(t.timer_started_at).getTime()) / 1000));
+                        return {
+                            ...t,
+                            total_seconds: (t.total_seconds || 0) + elapsed,
+                            timer_started_at: null,
+                            is_timer_running: false,
+                        };
+                    }
+                    return t;
+                })
+            );
+
+            try {
+                const res = await API.post(`/api/todos/start-timer/${todoId}/`);
+                if (res.data?.todos) {
+                    setTodos(res.data.todos);
+                }
+            } catch (err) {
+                console.error('Failed to start task timer', err);
+                alert(err.response?.data?.error || 'Failed to start task timer');
+                fetchStatusAndTodos();
+            }
+        }
+    };
+
     const proceedToggleTodo = async (id, newStatus, reason = '') => {
-        // Optimistically update checkbox state immediately
+        const now = new Date();
+        // Optimistically update checkbox state immediately and pause running timer on completion
         setTodos((prev) =>
-            prev.map((t) => (t.id === id ? { ...t, is_completed: newStatus } : t))
+            prev.map((t) => {
+                if (t.id === id) {
+                    let addedSecs = 0;
+                    if (newStatus && t.timer_started_at) {
+                        addedSecs = Math.max(0, Math.floor((now.getTime() - new Date(t.timer_started_at).getTime()) / 1000));
+                    }
+                    return {
+                        ...t,
+                        is_completed: newStatus,
+                        total_seconds: (t.total_seconds || 0) + addedSecs,
+                        timer_started_at: newStatus ? null : t.timer_started_at,
+                        is_timer_running: newStatus ? false : t.is_timer_running,
+                    };
+                }
+                return t;
+            })
         );
 
         // If task was just created and is still waiting for backend ID:
@@ -594,7 +711,7 @@ export default function Dashboard({ user }) {
             const res = await API.post(`/api/todos/toggle/${id}/`, payload);
             if (res.data?.status === 'success' && typeof res.data.is_completed === 'boolean') {
                 setTodos((prev) =>
-                    prev.map((t) => (t.id === id ? { ...t, is_completed: res.data.is_completed } : t))
+                    prev.map((t) => (t.id === id ? { ...t, ...(res.data.todo || {}), is_completed: res.data.is_completed } : t))
                 );
                 // Synchronize heatmap and daily stats
                 fetchHeatmap(selectedYear);
@@ -893,30 +1010,91 @@ export default function Dashboard({ user }) {
                     ) : (
                         todos.map((todo) => {
                             const isWorkStarted = Boolean(isActive || startTime || endTime);
+                            const isRunning = Boolean(todo.timer_started_at && !isBreak);
+
+                            let liveSeconds = todo.total_seconds || 0;
+                            if (isRunning && todo.timer_started_at) {
+                                const diff = Math.max(0, Math.floor((Date.now() - new Date(todo.timer_started_at).getTime()) / 1000));
+                                liveSeconds += diff;
+                            }
+
+                            const hasTime = liveSeconds > 0;
+
                             return (
                                 <div key={todo.id} className="todo-item d-flex align-items-center justify-content-between p-2 mb-1 border-bottom border-secondary-subtle">
-                                    <div className="d-flex align-items-center gap-3">
+                                    <div className="d-flex align-items-center gap-3 min-w-0 me-2">
                                         <input
                                             type="checkbox"
-                                            className="form-check-input todo-checkbox"
+                                            className="form-check-input todo-checkbox flex-shrink-0"
                                             checked={todo.is_completed}
                                             onChange={() => handleToggleTodo(todo.id)}
                                             disabled={!isActive}
                                             title={!isActive ? "Start your work timer to mark tasks" : (todo.is_completed ? "Click to uncheck (requires 10-word reason)" : "Click to complete task")}
                                         />
-                                        <span className={`todo-text ${todo.is_completed ? 'completed' : ''}`}>
+                                        <span className={`todo-text text-truncate ${todo.is_completed ? 'completed' : ''}`} title={todo.title}>
                                             {todo.title}
                                         </span>
                                     </div>
-                                    <button 
-                                        type="button"
-                                        className={`btn btn-link p-0 ${isWorkStarted ? 'text-muted opacity-50' : 'text-danger'}`} 
-                                        onClick={() => handleDeleteTodo(todo.id)} 
-                                        disabled={isWorkStarted}
-                                        title={isWorkStarted ? "Tasks cannot be deleted after starting work" : "Delete task"}
-                                    >
-                                        <i className={`bi ${isWorkStarted ? 'bi-lock-fill' : 'bi-trash'}`}></i>
-                                    </button>
+
+                                    <div className="d-flex align-items-center gap-2 flex-shrink-0">
+                                        {/* Task Timer Badge (Live / Paused / Completed) */}
+                                        {hasTime && (
+                                            <span 
+                                                className={`badge rounded-pill font-monospace px-2 py-1 ${
+                                                    isRunning
+                                                        ? 'bg-success-subtle text-success border border-success-subtle' 
+                                                        : todo.is_completed 
+                                                            ? 'bg-primary-subtle text-primary border border-primary-subtle' 
+                                                            : 'bg-secondary-subtle text-body border border-secondary-subtle'
+                                                }`}
+                                                style={{ fontSize: '0.72rem' }}
+                                                title={`Time logged: ${formatTaskDuration(liveSeconds)}`}
+                                            >
+                                                <i className={`bi ${isRunning ? 'bi-stopwatch-fill me-1' : 'bi-stopwatch me-1'}`}></i>
+                                                {formatTaskDuration(liveSeconds)}
+                                            </span>
+                                        )}
+
+                                        {/* Dynamic Control Button */}
+                                        {!isWorkStarted ? (
+                                            <button 
+                                                type="button"
+                                                className="btn btn-link p-0 text-danger" 
+                                                onClick={() => handleDeleteTodo(todo.id)} 
+                                                title="Delete task"
+                                            >
+                                                <i className="bi bi-trash"></i>
+                                            </button>
+                                        ) : todo.is_completed ? (
+                                            <span className="text-success p-1" title="Task Completed">
+                                                <i className="bi bi-check-circle-fill fs-6"></i>
+                                            </span>
+                                        ) : (
+                                            <button 
+                                                type="button"
+                                                className={`btn btn-link p-0 text-decoration-none ${
+                                                    isBreak 
+                                                        ? 'text-muted opacity-50' 
+                                                        : isRunning 
+                                                            ? 'text-warning' 
+                                                            : 'text-primary'
+                                                }`}
+                                                disabled={isBreak || !isActive}
+                                                onClick={() => handleToggleTaskTimer(todo.id, isRunning)}
+                                                title={
+                                                    isBreak 
+                                                        ? "Task timer paused while on break" 
+                                                        : !isActive 
+                                                            ? "Work session ended" 
+                                                            : isRunning 
+                                                                ? "Pause task timer" 
+                                                                : "Start task timer"
+                                                }
+                                            >
+                                                <i className={`bi fs-5 ${isRunning ? 'bi-pause-circle-fill' : 'bi-play-circle-fill'}`}></i>
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             );
                         })
