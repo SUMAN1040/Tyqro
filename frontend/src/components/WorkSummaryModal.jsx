@@ -55,39 +55,50 @@ const WorkSummaryModal = ({ isOpen, onClose, summaryData, onDownloadPdf, isDownl
                     >
                         
                         {/* Modal Header */}
-                        <div className="modal-header border-bottom border-secondary-subtle px-4 py-3 bg-body-tertiary">
-                            <div className="d-flex align-items-center gap-3">
-                                <div className="p-2 bg-primary-subtle text-primary rounded-3 d-flex align-items-center justify-content-center">
+                        <div className="modal-header border-bottom border-secondary-subtle px-4 py-3 bg-body-tertiary d-flex align-items-center justify-content-between">
+                            <div className="d-flex align-items-center gap-3 min-w-0">
+                                <div className="p-2 bg-primary-subtle text-primary rounded-3 d-flex align-items-center justify-content-center flex-shrink-0">
                                     <i className="bi bi-file-earmark-text-fill fs-5"></i>
                                 </div>
-                                <div>
-                                    <div className="d-flex align-items-center gap-2">
+                                <div className="min-w-0">
+                                    <div className="d-flex align-items-center gap-2 flex-wrap">
                                         <h5 className="modal-title fw-bold mb-0">Daily Work Summary</h5>
                                         <span className={`badge rounded-pill text-bg-${gradeVariant} px-2.5 py-1 small`}>
                                             {gradeText}
                                         </span>
+                                        <span className="badge bg-success-subtle text-success border border-success-subtle rounded-pill d-none d-sm-inline-flex align-items-center gap-1.5 py-1 px-2.5 small">
+                                            <i className="bi bi-shield-check"></i>
+                                            <span>Verified Audit Trail</span>
+                                        </span>
                                     </div>
-                                    <div className="text-muted small">
+                                    <div className="text-muted small text-truncate mt-0.5">
                                         {date_formatted || date} • Report #{report_id || 'N/A'}
                                     </div>
                                 </div>
                             </div>
-                            <div className="d-flex align-items-center gap-2">
-                                <span className="badge bg-success-subtle text-success border border-success-subtle rounded-pill d-none d-sm-flex align-items-center gap-1.5 py-1 px-2.5 small">
-                                    <i className="bi bi-shield-check"></i>
-                                    <span>Verified Audit Trail</span>
-                                </span>
-                                <button 
-                                    type="button" 
-                                    className="btn-close" 
-                                    onClick={onClose} 
-                                    aria-label="Close"
-                                ></button>
-                            </div>
+                            <button 
+                                type="button" 
+                                className="btn-close flex-shrink-0" 
+                                style={{ 
+                                    margin: 0, 
+                                    cursor: 'pointer',
+                                    padding: '0.5rem',
+                                    opacity: 0.85
+                                }} 
+                                onClick={onClose} 
+                                aria-label="Close"
+                            ></button>
                         </div>
 
                         {/* Modal Body */}
-                        <div className="modal-body p-4 position-relative overflow-hidden">
+                        <div 
+                            className="modal-body p-4 position-relative"
+                            style={{ 
+                                overflowY: 'auto', 
+                                maxHeight: 'calc(88vh - 135px)',
+                                scrollBehavior: 'smooth'
+                            }}
+                        >
                             {/* Security tiled watermark in white area */}
                             <div 
                                 className="position-absolute top-0 start-0 w-100 h-100 pointer-events-none user-select-none" 
@@ -236,7 +247,10 @@ const WorkSummaryModal = ({ isOpen, onClose, summaryData, onDownloadPdf, isDownl
                                                     {attendance?.target_achieved ? 'Session Conclusion Reason / Note' : 'Early Departure Reason'}
                                                 </h6>
                                             </div>
-                                            <div className="p-3 bg-body rounded-2 border border-danger-subtle text-body small">
+                                            <div 
+                                                className="p-3 bg-body rounded-2 border border-danger-subtle text-body small"
+                                                style={{ maxHeight: '130px', overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                                            >
                                                 "{attendance.early_leave_reason || attendance.end_reason}"
                                             </div>
                                         </div>
@@ -247,7 +261,10 @@ const WorkSummaryModal = ({ isOpen, onClose, summaryData, onDownloadPdf, isDownl
                                                 <i className="bi bi-alarm-fill fs-5 text-warning"></i>
                                                 <h6 className="fw-bold mb-0">Late Arrival Reason</h6>
                                             </div>
-                                            <div className="p-3 bg-body rounded-2 border border-warning-subtle text-body small">
+                                            <div 
+                                                className="p-3 bg-body rounded-2 border border-warning-subtle text-body small"
+                                                style={{ maxHeight: '130px', overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                                            >
                                                 "{attendance.late_reason}"
                                             </div>
                                         </div>
@@ -256,46 +273,62 @@ const WorkSummaryModal = ({ isOpen, onClose, summaryData, onDownloadPdf, isDownl
                             )}
 
                             {/* Task Breakdown Section */}
-                            <div>
-                                <div className="d-flex align-items-center justify-content-between mb-2">
+                            <div className="card border-0 bg-body-tertiary rounded-3 p-3">
+                                <div className="d-flex align-items-center justify-content-between mb-3">
                                     <h6 className="fw-bold mb-0 d-flex align-items-center gap-2">
                                         <i className="bi bi-list-task text-primary"></i> Tasks Breakdown
                                     </h6>
-                                    <span className="badge bg-secondary-subtle text-secondary rounded-pill">
-                                        {tasks?.total || 0} Total Tasks
-                                    </span>
+                                    <div className="d-flex align-items-center gap-2">
+                                        <span className="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1">
+                                            {tasks?.completed || 0} / {tasks?.total || 0} Completed
+                                        </span>
+                                        <span className="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1">
+                                            {tasks?.completion_rate || 0}%
+                                        </span>
+                                    </div>
                                 </div>
 
                                 {(!tasks?.list || tasks.list.length === 0) ? (
-                                    <div className="text-center text-muted py-3 small bg-body-tertiary rounded-3">
+                                    <div className="text-center text-muted py-4 small bg-body rounded-3 border">
+                                        <i className="bi bi-inbox fs-3 d-block text-muted mb-1 opacity-50"></i>
                                         No tasks were logged for this date.
                                     </div>
                                 ) : (
-                                    <div className="list-group rounded-3 shadow-none">
+                                    <div className="d-flex flex-column gap-2">
                                         {tasks.list.map((task, idx) => (
                                             <div 
                                                 key={task.id || idx} 
-                                                className="list-group-item list-group-item-action d-flex flex-column gap-1 py-2.5 px-3 border-secondary-subtle"
+                                                className="p-3 bg-body rounded-3 border border-secondary-subtle d-flex flex-column gap-2 shadow-xs"
                                             >
-                                                <div className="d-flex align-items-center justify-content-between">
-                                                    <div className="d-flex align-items-center gap-2.5">
-                                                        <i 
-                                                            className={`bi ${task.is_completed ? 'bi-check-circle-fill text-success' : 'bi-dash-circle text-muted'}`}
-                                                        ></i>
-                                                        <span className={`fw-medium ${task.is_completed ? 'text-decoration-line-through text-muted' : ''}`}>
-                                                            {task.title}
+                                                <div className="d-flex align-items-center justify-content-between gap-3">
+                                                    <div className="d-flex align-items-center gap-2.5 min-w-0">
+                                                        <span className="badge bg-secondary-subtle text-secondary font-monospace rounded-pill small" style={{ fontSize: '0.72rem' }}>
+                                                            #{idx + 1}
                                                         </span>
+                                                        <div className="d-flex align-items-center gap-2 min-w-0">
+                                                            <i 
+                                                                className={`bi ${task.is_completed ? 'bi-check-circle-fill text-success fs-5' : 'bi-circle text-muted fs-5'}`}
+                                                            ></i>
+                                                            <span className="fw-medium text-body text-break">
+                                                                {task.title}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                    <span className={`badge rounded-pill ${task.is_completed ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning'}`}>
+                                                    <span className={`badge rounded-pill flex-shrink-0 px-2.5 py-1.5 ${task.is_completed ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-warning-subtle text-warning border border-warning-subtle'}`}>
                                                         {task.is_completed ? 'Completed' : 'Pending'}
                                                     </span>
                                                 </div>
 
                                                 {/* Reopen note */}
                                                 {task.uncheck_reason && (
-                                                    <div className="ms-4 mt-1 p-2 bg-danger-subtle text-danger border border-danger-subtle rounded-2 small">
-                                                        <i className="bi bi-arrow-counterclockwise me-1 fw-bold"></i>
-                                                        <strong>Reopened Note:</strong> {task.uncheck_reason}
+                                                    <div className="ms-4 p-2.5 bg-danger-subtle text-danger border border-danger-subtle rounded-3 small">
+                                                        <div className="d-flex align-items-center gap-1.5 fw-semibold mb-1">
+                                                            <i className="bi bi-arrow-counterclockwise"></i>
+                                                            <span>Reopened Note:</span>
+                                                        </div>
+                                                        <div className="fst-italic text-break">
+                                                            "{task.uncheck_reason.trim()}"
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
