@@ -105,6 +105,7 @@ def end_work(request):
         if net_duration < datetime.timedelta(0):
             net_duration = datetime.timedelta(0)
         attendance.duration = net_duration
+        attendance.is_active = False
         end_reason_val = data.get('early_leave_reason') or data.get('end_reason') or data.get('reason')
         if end_reason_val:
             attendance.early_leave_reason = end_reason_val
@@ -187,6 +188,9 @@ def attendance_status(request):
     today = timezone.now().date()
     try:
         attendance = Attendance.objects.get(user=request.user, date=today)
+        if attendance.end_time and attendance.is_active:
+            attendance.is_active = False
+            attendance.save(update_fields=['is_active'])
         return Response(serialize_attendance_status(attendance))
     except Attendance.DoesNotExist:
         return Response(serialize_attendance_status(None))
@@ -215,6 +219,9 @@ def daily_work_summary(request):
         target_date = timezone.now().date()
 
     attendance = Attendance.objects.filter(user=request.user, date=target_date).first()
+    if attendance and attendance.end_time and attendance.is_active:
+        attendance.is_active = False
+        attendance.save(update_fields=['is_active'])
 
     # User Profile Info
     profile = getattr(request.user, 'profile', None)

@@ -140,8 +140,9 @@ export default function Dashboard({ user }) {
     // Apply attendance status immediately into local state
     const applyAttendanceStatus = (status) => {
         if (!status) return;
-        setIsActive(Boolean(status.is_active));
-        if (!status.is_active) {
+        const active = Boolean(status.is_active && !status.end_time);
+        setIsActive(active);
+        if (!active) {
             autoEndAttempted.current = false;
         }
         setStartTime(status.start_time ? new Date(status.start_time) : null);
@@ -292,10 +293,10 @@ export default function Dashboard({ user }) {
                     }
                 }
             } else if (startTime && endTime) {
-                const totalElapsed = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
+                const totalElapsed = Math.max(0, Math.floor((endTime.getTime() - startTime.getTime()) / 1000));
                 setTotalSeconds(totalElapsed);
                 setBreakSeconds(totalBreakSeconds);
-                setNetSeconds(totalElapsed - totalBreakSeconds);
+                setNetSeconds(Math.max(0, totalElapsed - totalBreakSeconds));
             } else {
                 setTotalSeconds(0);
                 setBreakSeconds(0);

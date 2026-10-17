@@ -264,7 +264,7 @@ export default function AppLayout({ user, onLogout, onUpdateUser, children }) {
                                             <div className="flex-grow-1">
                                                 <label className="form-label mb-1 fw-medium small">Profile Picture</label>
                                                 <input className="form-control form-control-sm bg-body" type="file" accept="image/*" onChange={(e) => setAvatarFile(e.target.files[0])} />
-                                                <div className="form-text mt-1 text-muted" style={{ fontSize: '0.8rem' }}>Max size: 100KB</div>
+                                                <div className="form-text mt-1 text-muted" style={{ fontSize: '0.8rem' }}>Max size: 3MB</div>
                                             </div>
                                         </div>
 

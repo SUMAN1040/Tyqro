@@ -145,10 +145,20 @@ def update_profile(request):
 
     avatar = request.FILES.get('avatar')
     if avatar:
-        if avatar.size > 100 * 1024:
-            return Response({'error': 'Profile image must be less than 100KB.'}, status=status.HTTP_400_BAD_REQUEST)
-        user.profile.avatar = avatar
-        user.profile.save()
+        if avatar.size > 3 * 1024 * 1024:
+            return Response({'error': 'Profile image must be less than 3MB.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            user.profile.avatar = avatar
+            user.profile.save()
+        except Exception as e:
+            error_msg = str(e)
+            if 'missing permissions' in error_msg.lower() or 'forbidden' in error_msg.lower():
+                return Response({
+                    'error': 'Cloudinary upload rejected: The API Key in .env is missing "create" (upload) permissions. Please check your Cloudinary Access Keys settings or use the Master/Root API key.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'error': f'Failed to upload image to Cloudinary: {error_msg}'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
     if new_email and new_email != user.email:
         if User.objects.filter(email__iexact=new_email).exclude(id=user.id).exists():
