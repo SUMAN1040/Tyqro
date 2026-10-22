@@ -77,7 +77,9 @@ def start_work(request):
     # Lock active session lookup to prevent concurrent starting of work
     active_attendance = Attendance.objects.select_for_update().filter(user=request.user, is_active=True).first()
     if active_attendance:
-        return Response({'status': 'error', 'message': 'Work already started'}, status=status.HTTP_400_BAD_REQUEST)
+        if active_attendance.date == today:
+            return Response({'status': 'success', 'message': 'Work already started', **serialize_attendance_status(active_attendance)})
+        return Response({'status': 'error', 'message': 'Previous work session still active'}, status=status.HTTP_400_BAD_REQUEST)
 
     attendance, created = Attendance.objects.select_for_update().get_or_create(user=request.user, date=today)
     
@@ -88,7 +90,7 @@ def start_work(request):
             attendance.late_reason = data['late_reason']
         attendance.save()
         return Response({'status': 'success', **serialize_attendance_status(attendance)})
-    return Response({'status': 'error', 'message': 'Work already started'}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({'status': 'success', 'message': 'Work already started', **serialize_attendance_status(attendance)})
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -150,7 +152,12 @@ def start_break(request):
     try:
         attendance = Attendance.objects.select_for_update().get(user=request.user, is_active=True)
         if attendance.current_break_start:
-            return Response({'status': 'error', 'message': 'Already on break'}, status=status.HTTP_400_BAD_REQUEST)
+            # Idempotent response if already on break from a rapid concurrent click
+            return Response({
+                'status': 'success',
+                'message': 'Already on break',
+                **serialize_attendance_status(attendance)
+            })
         attendance.current_break_start = timezone.now()
         attendance.save()
 
@@ -174,7 +181,12 @@ def end_break(request):
     try:
         attendance = Attendance.objects.select_for_update().get(user=request.user, is_active=True)
         if not attendance.current_break_start:
-            return Response({'status': 'error', 'message': 'Not currently on break'}, status=status.HTTP_400_BAD_REQUEST)
+            # Idempotent response if break was already ended from a rapid concurrent click
+            return Response({
+                'status': 'success',
+                'message': 'Not currently on break',
+                **serialize_attendance_status(attendance)
+            })
         now = timezone.now()
         elapsed = now - attendance.current_break_start
         attendance.total_break_duration += elapsed
