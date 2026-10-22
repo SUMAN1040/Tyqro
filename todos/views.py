@@ -3,10 +3,12 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.utils import timezone
+from django.db import transaction
 import datetime
 from .models import Todo
 from .serializers import TodoSerializer
 from attendance.models import Attendance
+from attendance.views import auto_close_previous_sessions
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -26,14 +28,16 @@ def todo_list(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@transaction.atomic
 def add_todo(request):
+    auto_close_previous_sessions(request.user)
     title = request.data.get('title', '').strip()
     if not title:
         return Response({'error': 'Title is required.'}, status=status.HTTP_400_BAD_REQUEST)
     if len(title) > 255:
         return Response({'error': 'Title cannot exceed 255 characters.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Check if work has started
+    # Check if work has started for today
     today = timezone.now().date()
     attendance = Attendance.objects.filter(user=request.user, date=today).first()
     if attendance and attendance.start_time:
@@ -45,9 +49,10 @@ def add_todo(request):
 
 @api_view(['PUT', 'PATCH', 'POST'])
 @permission_classes([IsAuthenticated])
+@transaction.atomic
 def edit_todo(request, todo_id):
     try:
-        todo = Todo.objects.get(id=todo_id, user=request.user)
+        todo = Todo.objects.select_for_update().get(id=todo_id, user=request.user)
     except Todo.DoesNotExist:
         return Response({'error': 'Todo not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -68,14 +73,16 @@ def edit_todo(request, todo_id):
 
 @api_view(['POST', 'PATCH'])
 @permission_classes([IsAuthenticated])
+@transaction.atomic
 def toggle_todo(request, todo_id):
+    auto_close_previous_sessions(request.user)
     # Can only toggle todos if the work session is active
     active_attendance = Attendance.objects.filter(user=request.user, is_active=True).first()
     if not active_attendance:
         return Response({'error': 'Cannot complete tasks unless work session is active.'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        todo = Todo.objects.get(id=todo_id, user=request.user)
+        todo = Todo.objects.select_for_update().get(id=todo_id, user=request.user)
         if todo.date != active_attendance.date:
             return Response({'error': 'Cannot modify tasks from a different date during active session.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -90,7 +97,7 @@ def toggle_todo(request, todo_id):
             todo.uncheck_reason = reason
             todo.is_completed = False
         else:
-            # Completing task: automatically pause/commit any active task timer
+            # Completing task: automatically pause/commit any active task timer atomically
             if todo.timer_started_at:
                 todo.pause_timer(commit=False)
             todo.is_completed = True
@@ -107,7 +114,9 @@ def toggle_todo(request, todo_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@transaction.atomic
 def start_task_timer(request, todo_id):
+    auto_close_previous_sessions(request.user)
     attendance = Attendance.objects.filter(user=request.user, is_active=True).first()
     if not attendance:
         return Response({'error': 'Please start your work session before starting a task timer.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -115,14 +124,14 @@ def start_task_timer(request, todo_id):
         return Response({'error': 'Cannot start a task timer while on break.'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        todo = Todo.objects.get(id=todo_id, user=request.user)
+        todo = Todo.objects.select_for_update().get(id=todo_id, user=request.user)
         if todo.date != attendance.date:
             return Response({'error': 'Cannot start a timer for a task from another date.'}, status=status.HTTP_400_BAD_REQUEST)
         if todo.is_completed:
             return Response({'error': 'Cannot start a timer for an already completed task.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Single active task rule: Pause any other running task timers for this user
-        other_running_todos = Todo.objects.filter(user=request.user, timer_started_at__isnull=False).exclude(id=todo.id)
+        # Single active task rule: Atomically lock and pause any other running task timers
+        other_running_todos = Todo.objects.select_for_update().filter(user=request.user, timer_started_at__isnull=False).exclude(id=todo.id)
         for t in other_running_todos:
             t.pause_timer(commit=True)
 
@@ -141,10 +150,12 @@ def start_task_timer(request, todo_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@transaction.atomic
 def pause_task_timer(request, todo_id):
     try:
-        todo = Todo.objects.get(id=todo_id, user=request.user)
-        todo.pause_timer(commit=True)
+        todo = Todo.objects.select_for_update().get(id=todo_id, user=request.user)
+        if todo.timer_started_at:
+            todo.pause_timer(commit=True)
 
         todos = Todo.objects.filter(user=request.user, date=todo.date).order_by('created_at')
         return Response({
@@ -157,9 +168,11 @@ def pause_task_timer(request, todo_id):
 
 @api_view(['DELETE', 'POST'])
 @permission_classes([IsAuthenticated])
+@transaction.atomic
 def delete_todo(request, todo_id):
+    auto_close_previous_sessions(request.user)
     try:
-        todo = Todo.objects.get(id=todo_id, user=request.user)
+        todo = Todo.objects.select_for_update().get(id=todo_id, user=request.user)
     except Todo.DoesNotExist:
         return Response({'error': 'Todo not found.'}, status=status.HTTP_404_NOT_FOUND)
 

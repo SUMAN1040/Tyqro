@@ -68,6 +68,8 @@ export default function Dashboard({ user }) {
     const [newTodo, setNewTodo] = useState('');
     const pendingDeletesRef = useRef(new Set());
     const pendingTogglesRef = useRef(new Map());
+    const taskTimerSeqRef = useRef(0);
+    const taskTimerQueueRef = useRef(Promise.resolve());
 
     // Heatmap / Stats states
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -576,7 +578,7 @@ export default function Dashboard({ user }) {
             pendingTogglesRef.current.delete(tempId);
             // Revert state on failure
             setTodos((prev) => prev.filter((t) => t.id !== tempId));
-            alert(err.response?.data?.error || 'Failed to add task.');
+            console.error('Failed to add task:', err);
         }
     };
 
@@ -608,19 +610,14 @@ export default function Dashboard({ user }) {
         return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     };
 
-    const handleToggleTaskTimer = async (todoId, isCurrentlyRunning) => {
-        if (!isActive) {
-            alert('Please start your work session before timing tasks.');
-            return;
-        }
-        if (isBreak) {
-            alert('Cannot run task timer while on break.');
+    const handleToggleTaskTimer = (todoId, isCurrentlyRunning) => {
+        if (!isActive || isBreak) {
             return;
         }
 
         const now = new Date();
         if (isCurrentlyRunning) {
-            // Optimistically pause this task
+            // Optimistically pause this task immediately (0ms delay)
             setTodos((prev) =>
                 prev.map((t) => {
                     if (t.id === todoId) {
@@ -638,17 +635,22 @@ export default function Dashboard({ user }) {
                 })
             );
 
-            try {
-                const res = await API.post(`/api/todos/pause-timer/${todoId}/`);
-                if (res.data?.todos) {
-                    setTodos(res.data.todos);
+            const seq = ++taskTimerSeqRef.current;
+            taskTimerQueueRef.current = taskTimerQueueRef.current.then(async () => {
+                try {
+                    const res = await API.post(`/api/todos/pause-timer/${todoId}/`);
+                    if (seq === taskTimerSeqRef.current && res.data?.todos) {
+                        setTodos(res.data.todos);
+                    }
+                } catch (err) {
+                    console.error('Failed to pause task timer:', err);
+                    if (seq === taskTimerSeqRef.current) {
+                        fetchStatusAndTodos();
+                    }
                 }
-            } catch (err) {
-                console.error('Failed to pause task timer', err);
-                fetchStatusAndTodos();
-            }
+            });
         } else {
-            // Optimistically start this task timer and pause all other active task timers
+            // Optimistically start this task timer and pause all other active task timers immediately
             setTodos((prev) =>
                 prev.map((t) => {
                     if (t.id === todoId) {
@@ -670,16 +672,20 @@ export default function Dashboard({ user }) {
                 })
             );
 
-            try {
-                const res = await API.post(`/api/todos/start-timer/${todoId}/`);
-                if (res.data?.todos) {
-                    setTodos(res.data.todos);
+            const seq = ++taskTimerSeqRef.current;
+            taskTimerQueueRef.current = taskTimerQueueRef.current.then(async () => {
+                try {
+                    const res = await API.post(`/api/todos/start-timer/${todoId}/`);
+                    if (seq === taskTimerSeqRef.current && res.data?.todos) {
+                        setTodos(res.data.todos);
+                    }
+                } catch (err) {
+                    console.error('Failed to start task timer:', err);
+                    if (seq === taskTimerSeqRef.current) {
+                        fetchStatusAndTodos();
+                    }
                 }
-            } catch (err) {
-                console.error('Failed to start task timer', err);
-                alert(err.response?.data?.error || 'Failed to start task timer');
-                fetchStatusAndTodos();
-            }
+            });
         }
     };
 
@@ -726,7 +732,7 @@ export default function Dashboard({ user }) {
             setTodos((prev) =>
                 prev.map((t) => (t.id === id ? { ...t, is_completed: !newStatus } : t))
             );
-            alert(err.response?.data?.error || 'Failed to toggle task.');
+            console.error('Failed to toggle task:', err);
         }
     };
 
@@ -751,7 +757,6 @@ export default function Dashboard({ user }) {
 
     const handleDeleteTodo = async (id) => {
         if (isActive || startTime || endTime) {
-            alert('Cannot delete tasks once work has started.');
             return;
         }
 
@@ -771,9 +776,9 @@ export default function Dashboard({ user }) {
             await API.post(`/api/todos/delete/${id}/`);
             fetchHeatmap(selectedYear);
         } catch (err) {
-            // Revert on error
+            // Revert on error without freezing UI
             setTodos((prev) => [...prev, todoToDelete]);
-            alert(err.response?.data?.error || 'Failed to delete task.');
+            console.error('Failed to delete task:', err);
         }
     };
 
