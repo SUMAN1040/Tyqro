@@ -22,7 +22,7 @@ export default function App() {
                 const res = await API.get('/api/auth/user/');
                 setUser(res.data);
                 setPage('dashboard');
-            } catch (err) {
+            } catch {
                 // Invalid or expired token: clear storage
                 localStorage.removeItem('access_token');
                 localStorage.removeItem('refresh_token');

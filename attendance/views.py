@@ -16,31 +16,38 @@ def auto_close_previous_sessions(user):
     except Exception:
         target_hours = 9.0
         
-    active_prev_sessions = Attendance.objects.select_for_update().filter(user=user, is_active=True).exclude(date=today)
-    for session in active_prev_sessions:
-        if not session.start_time:
-            session.start_time = timezone.now() - datetime.timedelta(hours=target_hours)
-        session.end_time = session.start_time + datetime.timedelta(hours=target_hours)
-        if session.current_break_start:
-            session.current_break_start = None
-            
-        net_duration = (session.end_time - session.start_time) - session.total_break_duration
-        if net_duration < datetime.timedelta(0):
-            net_duration = datetime.timedelta(0)
-        session.duration = net_duration
-        session.is_active = False
-        session.save()
+    with transaction.atomic():
+        active_prev_sessions = Attendance.objects.select_for_update().filter(user=user, is_active=True).exclude(date=today)
+        for session in active_prev_sessions:
+            if not session.start_time:
+                session.start_time = timezone.now() - datetime.timedelta(hours=target_hours)
+            session.end_time = session.start_time + datetime.timedelta(hours=target_hours)
+            if session.current_break_start:
+                if session.current_break_start < session.end_time:
+                    session.total_break_duration += (session.end_time - session.current_break_start)
+                session.current_break_start = None
+                
+            net_duration = (session.end_time - session.start_time) - session.total_break_duration
+            if net_duration < datetime.timedelta(0):
+                net_duration = datetime.timedelta(0)
+            session.duration = net_duration
+            session.is_active = False
+            session.save()
 
-        from todos.models import Todo
-        for active_task in Todo.objects.filter(user=user, date=session.date, timer_started_at__isnull=False):
-            active_task.pause_timer(commit=True)
-        
-        from analytics.models import DailyPerformance
-        perf, _ = DailyPerformance.objects.select_for_update().get_or_create(user=user, date=session.date)
-        perf.hours_worked = round(session.duration.total_seconds() / 3600.0, 2)
-        perf.attendance_points = 100
-        perf.total_points = perf.attendance_points
-        perf.save()
+            from todos.models import Todo
+            for active_task in Todo.objects.filter(user=user, date=session.date, timer_started_at__isnull=False):
+                active_task.pause_timer(commit=True)
+            
+            from analytics.models import DailyPerformance
+            perf, _ = DailyPerformance.objects.select_for_update().get_or_create(user=user, date=session.date)
+            perf.hours_worked = round(session.duration.total_seconds() / 3600.0, 2)
+            perf.attendance_points = 100
+            user_todos = Todo.objects.filter(user=user, date=session.date)
+            total_todos = user_todos.count()
+            completed_todos = user_todos.filter(is_completed=True).count()
+            perf.todo_points = int(round((completed_todos / total_todos) * 100)) if total_todos > 0 else 100
+            perf.total_points = perf.attendance_points + perf.todo_points
+            perf.save()
 
 def serialize_attendance_status(attendance):
     if not attendance:
@@ -333,7 +340,7 @@ def daily_work_summary(request):
     import hashlib
     from django.conf import settings
 
-    secret_key = getattr(settings, 'SECRET_KEY', 'tyqro-report-secret').encode('utf-8')
+    secret_key = (getattr(settings, 'SECRET_KEY', None) or 'tyqro-report-secret').encode('utf-8')
     if is_active and not has_ended:
         sig_payload = f"{request.user.id}:{target_date.isoformat()}:{start_iso}:ACTIVE:{total_tasks}:{completed_tasks}".encode('utf-8')
     else:
@@ -481,7 +488,7 @@ def verify_report_public(request, report_id):
     total_tasks = tasks.count()
     completed_tasks = tasks.filter(is_completed=True).count()
 
-    secret_key = getattr(settings, 'SECRET_KEY', 'tyqro-report-secret').encode('utf-8')
+    secret_key = (getattr(settings, 'SECRET_KEY', None) or 'tyqro-report-secret').encode('utf-8')
     sig_payload_completed = f"{user.id}:{target_date.isoformat()}:{gross_sec}:{net_sec}:{total_tasks}:{completed_tasks}".encode('utf-8')
     sig_completed = hmac.new(secret_key, sig_payload_completed, hashlib.sha256).hexdigest()[:16].upper()
 

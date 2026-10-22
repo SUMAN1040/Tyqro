@@ -1,14 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { API } from '../api';
 
 export default function GroupStudyPeerPanel({
-    user,
     groupStatus,
     onCloseSplitView,
     onOpenModal,
     onRefreshGroup
 }) {
-    const peers = groupStatus?.peers || groupStatus?.members || [];
+    const peers = useMemo(() => groupStatus?.peers || groupStatus?.members || [], [groupStatus]);
     const [selectedPeerId, setSelectedPeerId] = useState(peers[0]?.id || null);
     const [peerData, setPeerData] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -110,8 +109,6 @@ export default function GroupStudyPeerPanel({
         const secs = String(Math.floor(safeSecs % 60)).padStart(2, '0');
         return `${hrs}:${mins}:${secs}`;
     };
-
-    const selectedPeer = peers.find(p => p.id === selectedPeerId);
 
     // If no peers connected yet
     if (peers.length === 0) {

@@ -34,7 +34,6 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
 
 INSTALLED_APPS = [
@@ -233,5 +232,14 @@ SIMPLE_JWT = {
 }
 
 # CORS Configurations
-CORS_ALLOW_ALL_ORIGINS = True
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOWED_ORIGIN_REGEXES = [
+        r"^https://[\w-]+\.vercel\.app$",
+    ]
+    cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS')
+    if cors_origins:
+        CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins.split(',') if origin.strip()]
+
 CORS_ALLOW_CREDENTIALS = True

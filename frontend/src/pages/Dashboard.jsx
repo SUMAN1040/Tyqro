@@ -173,17 +173,15 @@ export default function Dashboard({ user }) {
             setAvailableYears(res.data.years);
             setSelectedYear(res.data.selected_year);
 
-            setDataMap((prev) => {
-                const map = { ...prev };
-                res.data.data.forEach((d) => {
-                    map[d.date] = d;
-                });
-                return map;
+            const newMap = {};
+            res.data.data.forEach((d) => {
+                newMap[d.date] = d;
             });
+            setDataMap((prev) => ({ ...prev, ...newMap }));
 
             // Default to today
             const todayStr = new Date().toLocaleDateString('en-CA');
-            const dayData = map[todayStr];
+            const dayData = newMap[todayStr];
             setSelectedDateStats({
                 date: 'Today',
                 hours: dayData ? dayData.hours : 0.0,
@@ -305,7 +303,7 @@ export default function Dashboard({ user }) {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [isActive, isBreak, startTime, endTime, totalBreakSeconds, currentBreakStart, user]);
+    }, [isActive, isBreak, startTime, endTime, totalBreakSeconds, currentBreakStart, user, selectedYear]);
 
     // Word validation for reasons
     const countWords = (text) => {
@@ -1414,7 +1412,7 @@ export default function Dashboard({ user }) {
                 }
             }
         }
-    }), [graphDataList, isDarkMode, graphRange]);
+    }), [graphDataList, isDarkMode]);
 
     const renderHeatmapSection = () => (
         <div className="row g-4">

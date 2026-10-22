@@ -26,5 +26,19 @@ class Todo(models.Model):
     def is_timer_running(self):
         return self.timer_started_at is not None
 
+    @property
+    def current_total_seconds(self):
+        secs = self.total_seconds or 0
+        if self.timer_started_at:
+            elapsed = (timezone.now() - self.timer_started_at).total_seconds()
+            secs += max(0, int(elapsed))
+        return secs
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'date']),
+            models.Index(fields=['user', 'timer_started_at']),
+        ]
+
     def __str__(self):
         return self.title

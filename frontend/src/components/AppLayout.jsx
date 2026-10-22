@@ -46,6 +46,20 @@ export default function AppLayout({ user, onLogout, onUpdateUser, children }) {
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
+    // Synchronize form states when user data updates
+    useEffect(() => {
+        if (user) {
+            setFirstName(user.first_name || '');
+            setLastName(user.last_name || '');
+            setEmail(user.email || '');
+            setDailyHoursTarget(user.profile?.daily_hours_target || 9.0);
+            setUseFixedSchedule(Boolean(user.profile?.use_fixed_schedule));
+            setWorkStartTime(user.profile?.work_start_time || '09:00');
+            setWorkEndTime(user.profile?.work_end_time || '18:00');
+            setWorkDays(user.profile?.work_days ? user.profile.work_days.split(',') : []);
+        }
+    }, [user]);
+
     // Toggle theme
     useEffect(() => {
         document.documentElement.setAttribute('data-bs-theme', theme);
@@ -173,7 +187,8 @@ export default function AppLayout({ user, onLogout, onUpdateUser, children }) {
             await API.post('/api/auth/profile/delete/');
             onLogout();
         } catch (err) {
-            alert('Failed to delete account. Please try again.');
+            const msg = err.response?.data?.error || err.message || 'Failed to delete account. Please try again.';
+            alert(msg);
             setDeleteLoading(false);
         }
     };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { API } from '../api';
 
 export default function GroupStudyModal({ 
@@ -45,7 +45,7 @@ export default function GroupStudyModal({
     }, [initialTab]);
 
     // Fetch or generate lifetime study code
-    const fetchMyCode = async () => {
+    const fetchMyCode = useCallback(async () => {
         setCodeLoading(true);
         try {
             const res = await API.get('/api/study/code/');
@@ -56,13 +56,13 @@ export default function GroupStudyModal({
         } finally {
             setCodeLoading(false);
         }
-    };
+    }, [onRefreshGroup]);
 
     useEffect(() => {
         if (isOpen && !myCode) {
             fetchMyCode();
         }
-    }, [isOpen]);
+    }, [isOpen, myCode, fetchMyCode]);
 
     // Copy to clipboard
     const handleCopyCode = () => {

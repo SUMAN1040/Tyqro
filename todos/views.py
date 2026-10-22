@@ -27,9 +27,11 @@ def todo_list(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_todo(request):
-    title = request.data.get('title')
+    title = request.data.get('title', '').strip()
     if not title:
         return Response({'error': 'Title is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    if len(title) > 255:
+        return Response({'error': 'Title cannot exceed 255 characters.'}, status=status.HTTP_400_BAD_REQUEST)
 
     # Check if work has started
     today = timezone.now().date()
@@ -41,15 +43,42 @@ def add_todo(request):
     serializer = TodoSerializer(todo)
     return Response({'status': 'success', 'todo': serializer.data}, status=status.HTTP_201_CREATED)
 
+@api_view(['PUT', 'PATCH', 'POST'])
+@permission_classes([IsAuthenticated])
+def edit_todo(request, todo_id):
+    try:
+        todo = Todo.objects.get(id=todo_id, user=request.user)
+    except Todo.DoesNotExist:
+        return Response({'error': 'Todo not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    # If work session for that day is already completed, disallow modifying task title
+    attendance = Attendance.objects.filter(user=request.user, date=todo.date).first()
+    if attendance and attendance.end_time and not attendance.is_active:
+        return Response({'error': 'Cannot edit tasks for an already completed work day.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    title = request.data.get('title', '').strip()
+    if not title:
+        return Response({'error': 'Title cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
+    if len(title) > 255:
+        return Response({'error': 'Title cannot exceed 255 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    todo.title = title
+    todo.save(update_fields=['title'])
+    return Response({'status': 'success', 'todo': TodoSerializer(todo).data})
+
 @api_view(['POST', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def toggle_todo(request, todo_id):
     # Can only toggle todos if the work session is active
-    if not Attendance.objects.filter(user=request.user, is_active=True).exists():
+    active_attendance = Attendance.objects.filter(user=request.user, is_active=True).first()
+    if not active_attendance:
         return Response({'error': 'Cannot complete tasks unless work session is active.'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         todo = Todo.objects.get(id=todo_id, user=request.user)
+        if todo.date != active_attendance.date:
+            return Response({'error': 'Cannot modify tasks from a different date during active session.'}, status=status.HTTP_400_BAD_REQUEST)
+
         # If task is already completed, unchecking requires a minimum 10-word explanation
         if todo.is_completed:
             reason = request.data.get('reason', '').strip()
@@ -87,6 +116,8 @@ def start_task_timer(request, todo_id):
 
     try:
         todo = Todo.objects.get(id=todo_id, user=request.user)
+        if todo.date != attendance.date:
+            return Response({'error': 'Cannot start a timer for a task from another date.'}, status=status.HTTP_400_BAD_REQUEST)
         if todo.is_completed:
             return Response({'error': 'Cannot start a timer for an already completed task.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -127,15 +158,15 @@ def pause_task_timer(request, todo_id):
 @api_view(['DELETE', 'POST'])
 @permission_classes([IsAuthenticated])
 def delete_todo(request, todo_id):
-    # Cannot delete tasks after starting or ending work for today
-    today = timezone.now().date()
-    attendance = Attendance.objects.filter(user=request.user, date=today).first()
-    if attendance and attendance.start_time:
-        return Response({'error': 'Cannot delete tasks after starting work.'}, status=status.HTTP_400_BAD_REQUEST)
-
     try:
         todo = Todo.objects.get(id=todo_id, user=request.user)
-        todo.delete()
-        return Response({'status': 'success'})
     except Todo.DoesNotExist:
         return Response({'error': 'Todo not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Check attendance for this task's specific date
+    attendance = Attendance.objects.filter(user=request.user, date=todo.date).first()
+    if attendance and attendance.start_time:
+        return Response({'error': 'Cannot delete tasks for a day where work has already started.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    todo.delete()
+    return Response({'status': 'success'})

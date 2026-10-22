@@ -23,7 +23,7 @@ export default function VerifyOTP({ onNavigate, navData }) {
 
         setLoading(true);
         try {
-            const response = await API.post('/api/auth/verify-otp/', {
+            await API.post('/api/auth/verify-otp/', {
                 user_id: user_id,
                 otp: otp.trim(),
             });

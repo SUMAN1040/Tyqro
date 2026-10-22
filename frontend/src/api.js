@@ -40,7 +40,7 @@ API.interceptors.response.use(
                     localStorage.setItem('access_token', newAccessToken);
                     originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
                     return API(originalRequest);
-                } catch (refreshError) {
+                } catch {
                     // Refresh token is expired too: clear storage and redirect
                     localStorage.removeItem('access_token');
                     localStorage.removeItem('refresh_token');
