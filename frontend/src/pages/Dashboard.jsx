@@ -53,11 +53,8 @@ export default function Dashboard({ user }) {
     const [endTime, setEndTime] = useState(null);
     const [totalBreakSeconds, setTotalBreakSeconds] = useState(0);
     const [currentBreakStart, setCurrentBreakStart] = useState(null);
-    const [isBreakLoading, setIsBreakLoading] = useState(false);
-    const [breakError, setBreakError] = useState('');
-    const isBreakTogglingRef = useRef(false);
-    const [isStartingWork, setIsStartingWork] = useState(false);
-    const [startWorkError, setStartWorkError] = useState('');
+    const breakSeqRef = useRef(0);
+    const breakQueueRef = useRef(Promise.resolve());
     
     const [totalSeconds, setTotalSeconds] = useState(0);
     const [breakSeconds, setBreakSeconds] = useState(0);
@@ -326,10 +323,8 @@ export default function Dashboard({ user }) {
     };
 
     const proceedStartWork = async () => {
-        if (isStartingWork) return;
         setShowConfirmStart(false);
         setReasonError('');
-        setStartWorkError('');
 
         // Fixed Mode: Check if clocking in late
         if (user?.profile?.use_fixed_schedule) {
@@ -350,7 +345,6 @@ export default function Dashboard({ user }) {
             }
         }
 
-        setIsStartingWork(true);
         // Optimistic UI update: Start instantly on screen
         const optimisticStart = new Date();
         setIsActive(true);
@@ -361,13 +355,9 @@ export default function Dashboard({ user }) {
             const res = await API.post('/api/attendance/start/', {});
             applyAttendanceStatus(res.data);
         } catch (err) {
-            // Roll back on failure
+            // Roll back on failure without freezing UI
+            console.error('Failed to start work:', err);
             fetchStatusAndTodos();
-            const msg = err.response?.data?.message || err.response?.data?.error || 'Failed to start work.';
-            setStartWorkError(msg);
-            setTimeout(() => setStartWorkError(''), 4000);
-        } finally {
-            setIsStartingWork(false);
         }
     };
 
@@ -491,17 +481,11 @@ export default function Dashboard({ user }) {
         }
     };
 
-    const handleToggleBreak = async () => {
-        // Prevent concurrent double-clicks or rapid bursts
-        if (isBreakTogglingRef.current) return;
-        isBreakTogglingRef.current = true;
-        setIsBreakLoading(true);
-        setBreakError('');
-
+    const handleToggleBreak = () => {
         const enteringBreak = !isBreak;
         const now = new Date();
 
-        // Optimistic break switch
+        // Instant optimistic break switch: 0ms delay, instantaneous UI feedback
         if (enteringBreak) {
             setIsBreak(true);
             setCurrentBreakStart(now);
@@ -529,23 +513,22 @@ export default function Dashboard({ user }) {
             setCurrentBreakStart(null);
         }
 
-        try {
-            const endpoint = enteringBreak ? '/api/attendance/start-break/' : '/api/attendance/end-break/';
-            const res = await API.post(endpoint);
-            applyAttendanceStatus(res.data);
-        } catch (err) {
-            console.error('Failed to toggle break:', err);
-            fetchStatusAndTodos();
-            const msg = err.response?.data?.message || err.response?.data?.error || 'Failed to toggle break.';
-            setBreakError(msg);
-            setTimeout(() => setBreakError(''), 4000);
-        } finally {
-            setIsBreakLoading(false);
-            // Cooldown debounce so rapid clicks are swallowed safely without freezing
-            setTimeout(() => {
-                isBreakTogglingRef.current = false;
-            }, 300);
-        }
+        // Process API calls sequentially in the background without freezing the UI or dropping rapid clicks
+        const seq = ++breakSeqRef.current;
+        breakQueueRef.current = breakQueueRef.current.then(async () => {
+            try {
+                const endpoint = enteringBreak ? '/api/attendance/start-break/' : '/api/attendance/end-break/';
+                const res = await API.post(endpoint);
+                if (seq === breakSeqRef.current) {
+                    applyAttendanceStatus(res.data);
+                }
+            } catch (err) {
+                console.error('Failed to toggle break:', err);
+                if (seq === breakSeqRef.current) {
+                    fetchStatusAndTodos();
+                }
+            }
+        });
     };
 
     // Todo Actions
@@ -926,27 +909,9 @@ export default function Dashboard({ user }) {
 
                 <div className="d-flex flex-column gap-2 w-100 mb-3">
                     {!isActive && !endTime ? (
-                        <>
-                            <button
-                                className={`btn btn-primary w-100 py-2 fw-medium rounded-pill d-flex align-items-center justify-content-center gap-2 ${isStartingWork ? 'opacity-75' : ''}`}
-                                onClick={handleStartWorkClick}
-                                disabled={isStartingWork}
-                            >
-                                {isStartingWork ? (
-                                    <>
-                                        <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                                        <span>Starting Work...</span>
-                                    </>
-                                ) : (
-                                    'Start Work'
-                                )}
-                            </button>
-                            {startWorkError && (
-                                <div className="alert alert-danger py-1 px-3 mt-1 mb-0 small text-center rounded-pill" role="alert">
-                                    {startWorkError}
-                                </div>
-                            )}
-                        </>
+                        <button className="btn btn-primary w-100 py-2 fw-medium rounded-pill" onClick={handleStartWorkClick}>
+                            Start Work
+                        </button>
                     ) : isActive ? (
                         <button className="btn btn-outline-danger w-100 py-2 fw-medium rounded-pill" onClick={handleEndWorkClick}>
                             End Work
@@ -1010,28 +975,10 @@ export default function Dashboard({ user }) {
 
                 {isActive && (
                     <div className="w-100">
-                        <button
-                            className={`btn w-100 py-2 fw-medium rounded-pill d-flex align-items-center justify-content-center gap-2 ${isBreak ? 'btn-success' : 'btn-warning'} ${isBreakLoading ? 'opacity-75' : ''}`}
-                            onClick={handleToggleBreak}
-                            disabled={isBreakLoading}
-                        >
-                            {isBreakLoading ? (
-                                <>
-                                    <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                                    <span>{isBreak ? 'Resuming...' : 'Switching to Break...'}</span>
-                                </>
-                            ) : (
-                                <>
-                                    <i className={isBreak ? 'bi bi-play-fill' : 'bi bi-pause-fill'}></i>
-                                    <span>{isBreak ? 'Resume Work' : 'Go on Break'}</span>
-                                </>
-                            )}
+                        <button className={`btn w-100 py-2 fw-medium rounded-pill d-flex align-items-center justify-content-center gap-2 ${isBreak ? 'btn-success' : 'btn-warning'}`} onClick={handleToggleBreak}>
+                            <i className={isBreak ? 'bi bi-play-fill' : 'bi bi-pause-fill'}></i>
+                            {isBreak ? 'Resume Work' : 'Go on Break'}
                         </button>
-                        {breakError && (
-                            <div className="alert alert-danger py-1 px-3 mt-2 mb-0 small text-center rounded-pill" role="alert">
-                                {breakError}
-                            </div>
-                        )}
                     </div>
                 )}
             </div>
