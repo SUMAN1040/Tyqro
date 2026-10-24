@@ -363,6 +363,7 @@ export default function Dashboard({ user }) {
         }
     };
 
+    
     const handleStartWorkWithReason = async () => {
         if (countWords(reasonText) < 15) {
             setReasonError('Please write a reason of at least 15 words.');
